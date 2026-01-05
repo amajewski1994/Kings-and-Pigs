@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Assets, Rectangle, Texture, AnimatedSprite } from "pixi.js";
 
-type AnimName = "idle" | "run" | "jump";
+type AnimName = "idle" | "run" | "jump" | "attack";
 
 type PlayerProps = {
     x: number;
@@ -11,6 +11,9 @@ type PlayerProps = {
     idleUrl: string;
     runUrl: string;
     jumpUrl: string;
+    attackUrl: string;
+
+    onAnimComplete?: (name: AnimName) => void;
 
     frameW?: number; // 78
     frameH?: number; // 58
@@ -35,14 +38,17 @@ export function Player({
     idleUrl,
     runUrl,
     jumpUrl,
+    attackUrl,
     frameW = 78,
     frameH = 58,
     fps = 10,
     flipX = false,
+    onAnimComplete
 }: PlayerProps) {
     const [idleFrames, setIdleFrames] = useState<Texture[] | null>(null);
     const [runFrames, setRunFrames] = useState<Texture[] | null>(null);
     const [jumpFrames, setJumpFrames] = useState<Texture[] | null>(null);
+    const [attackFrames, setAttackFrames] = useState<Texture[] | null>(null);
 
     const spriteRef = useRef<AnimatedSprite | null>(null);
 
@@ -51,25 +57,29 @@ export function Player({
 
         (async () => {
             try {
-                const [idleTex, runTex, jumpTex] = await Promise.all([
+                const [idleTex, runTex, jumpTex, attackTex] = await Promise.all([
                     Assets.load<Texture>(idleUrl),
                     Assets.load<Texture>(runUrl),
                     Assets.load<Texture>(jumpUrl),
+                    Assets.load<Texture>(attackUrl),
                 ]);
 
                 idleTex.source.scaleMode = "nearest";
                 runTex.source.scaleMode = "nearest";
                 jumpTex.source.scaleMode = "nearest";
+                attackTex.source.scaleMode = "nearest";
 
                 const idle = sliceHorizontalSheet(idleTex, frameW, frameH);
                 const run = sliceHorizontalSheet(runTex, frameW, frameH);
                 const jump = sliceHorizontalSheet(jumpTex, frameW, frameH);
+                const attack = sliceHorizontalSheet(attackTex, frameW, frameH);
 
                 if (!alive) return;
 
                 setIdleFrames(idle);
                 setRunFrames(run);
                 setJumpFrames(jump);
+                setAttackFrames(attack);
             } catch (e) {
                 console.error("Failed to load player sprites:", e);
             }
@@ -78,13 +88,14 @@ export function Player({
         return () => {
             alive = false;
         };
-    }, [idleUrl, runUrl, jumpUrl, frameW, frameH]);
+    }, [idleUrl, runUrl, jumpUrl, attackUrl, frameW, frameH]);
 
     const textures = useMemo(() => {
         if (anim === "idle") return idleFrames;
         if (anim === "run") return runFrames;
-        return jumpFrames;
-    }, [anim, idleFrames, runFrames, jumpFrames]);
+        if (anim === "jump") return jumpFrames;
+        return attackFrames;
+    }, [anim, idleFrames, runFrames, jumpFrames, attackFrames]);
 
     const animationSpeed = fps / 60;
 
@@ -100,8 +111,14 @@ export function Player({
             s.textures = textures;
         }
 
-        s.loop = anim !== "jump";
+        const isOneShot = anim === "jump" || anim === "attack";
+        s.loop = !isOneShot;
         s.animationSpeed = animationSpeed;
+
+        s.onComplete = undefined;
+        if (anim === "attack") {
+            s.onComplete = () => onAnimComplete?.("attack");
+        }
 
         if (animChanged) {
             s.gotoAndPlay(0);
@@ -109,7 +126,7 @@ export function Player({
         } else {
             if (!s.playing) s.play();
         }
-    }, [anim, textures, animationSpeed]);
+    }, [anim, textures, animationSpeed, onAnimComplete]);
 
 
 

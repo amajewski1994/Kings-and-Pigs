@@ -2,7 +2,7 @@ import { PLAYER_CONFIG } from "./config/player";
 import { WORLD_CONFIG } from "./config/world";
 
 import { useTick } from "@pixi/react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Texture } from "pixi.js";
 
 import { TileMap } from "./components/TileMap";
@@ -18,6 +18,7 @@ import { OBJECTS } from "./game/objects";
 const playerIdleUrl = "/assets/Sprites/01-King Human/Idle.png";
 const playerRunUrl = "/assets/Sprites/01-King Human/Run.png";
 const playerJumpUrl = "/assets/Sprites/01-King Human/Jump.png";
+const playerAttackUrl = "/assets/Sprites/01-King Human/Attack.png";
 
 type Props = {
     tileset: Texture;
@@ -79,8 +80,22 @@ export function Game({
 
     const [playerX, setPlayerX] = useState(startX);
     const [playerY, setPlayerY] = useState(groundY);
-    const [anim, setAnim] = useState<"idle" | "run" | "jump">("idle");
+    const [anim, setAnim] = useState<"idle" | "run" | "jump" | "attack">("idle");
+    const [isAttacking, setIsAttacking] = useState(false);
     const [flipX, setFlipX] = useState(false);
+
+    useEffect(() => {
+        const onMouseDown = (e: MouseEvent) => {
+            if (e.button !== 0) return;
+            setIsAttacking((prev) => {
+                if (prev) return prev;
+                return true;
+            });
+        };
+
+        window.addEventListener("mousedown", onMouseDown);
+        return () => window.removeEventListener("mousedown", onMouseDown);
+    }, []);
 
     const phys = useRef({
         x: startX,
@@ -157,7 +172,11 @@ export function Game({
             return prev === nextFlip ? prev : nextFlip;
         });
 
-        const nextAnim: "idle" | "run" | "jump" = !p.grounded ? "jump" : dir !== 0 ? "run" : "idle";
+        const nextAnimBase: "idle" | "run" | "jump" =
+            !p.grounded ? "jump" : dir !== 0 ? "run" : "idle";
+
+        const nextAnim: "idle" | "run" | "jump" | "attack" =
+            isAttacking ? "attack" : nextAnimBase;
         setAnim((prev) => (prev === nextAnim ? prev : nextAnim));
     });
 
@@ -191,7 +210,11 @@ export function Game({
                 idleUrl={playerIdleUrl}
                 runUrl={playerRunUrl}
                 jumpUrl={playerJumpUrl}
+                attackUrl={playerAttackUrl}
                 fps={10}
+                onAnimComplete={(name) => {
+                    if (name === "attack") setIsAttacking(false);
+                }}
             />
 
             {/* <TilePalette
