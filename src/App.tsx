@@ -7,6 +7,13 @@ const tilesetUrl = "/assets/Sprites/14-TileSets/Terrain.png";
 
 export default function App() {
   const [tileset, setTileset] = useState<Texture | null>(null);
+  const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
+
+  useEffect(() => {
+    const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -21,8 +28,17 @@ export default function App() {
   }, []);
 
   return (
-    <Application width={1000} height={720} backgroundColor={0x0b1020}>
-      {tileset && <Game tileset={tileset} />}
-    </Application>
+    <div style={{ width: "100vw", height: "100vh" }}>
+      <Application
+        width={size.w}
+        height={size.h}
+        backgroundColor={0x0b1020}
+        antialias={false}
+        autoDensity
+        resolution={window.devicePixelRatio || 1}
+      >
+        {tileset && <Game tileset={tileset} screenW={size.w} screenH={size.h} />}
+      </Application>
+    </div>
   );
 }

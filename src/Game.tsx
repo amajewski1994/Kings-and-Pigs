@@ -12,13 +12,31 @@ import { useKeyboard } from "./components/useKeyboard";
 
 import { makeSolidSet, moveWithTileCollision } from "./game/collision";
 
-type Props = { tileset: Texture };
+type Props = {
+    tileset: Texture;
+    screenW: number;
+    screenH: number;
+};
 
 const idleUrl = "/assets/Sprites/01-King Human/Idle.png";
 const runUrl = "/assets/Sprites/01-King Human/Run.png";
 const jumpUrl = "/assets/Sprites/01-King Human/Jump.png";
 
-export function Game({ tileset }: Props) {
+export function Game({ tileset, screenW, screenH }: Props) {
+    const {
+        SPEED,
+        GRAVITY,
+        JUMP_V,
+        HITBOX: { W: PLAYER_W, H: PLAYER_H },
+        RENDER: { OFF_X: RENDER_OFF_X, OFF_Y: RENDER_OFF_Y },
+    } = PLAYER_CONFIG;
+
+    const {
+        TILE,
+        MAP_W,
+        MAP_H
+    } = WORLD_CONFIG;
+
     const map = useMemo(
         () =>
             makeSampleShapeMap(25, 15, 127, {
@@ -67,15 +85,11 @@ export function Game({ tileset }: Props) {
 
     const keysRef = useKeyboard();
 
-    const {
-        SPEED,
-        GRAVITY,
-        JUMP_V,
-        HITBOX: { W: PLAYER_W, H: PLAYER_H },
-        RENDER: { OFF_X: RENDER_OFF_X, OFF_Y: RENDER_OFF_Y },
-    } = PLAYER_CONFIG;
+    const mapPxW = MAP_W * TILE;
+    const mapPxH = MAP_H * TILE;
 
-    const { TILE } = WORLD_CONFIG;
+    const mapOffsetX = Math.floor((screenW - mapPxW) / 2);
+    const mapOffsetY = Math.floor((screenH - mapPxH) / 2);
 
     useTick((Ticker) => {
         const dtRaw = Ticker.deltaMS / 1000;
@@ -126,8 +140,8 @@ export function Game({ tileset }: Props) {
 
         const renderX = Math.round(p.x + PLAYER_W / 2 + RENDER_OFF_X);
         const renderY = Math.round(p.y + PLAYER_H + RENDER_OFF_Y);
-        setPlayerX(renderX);
-        setPlayerY(renderY);
+        setPlayerX(mapOffsetX + renderX);
+        setPlayerY(mapOffsetY + renderY);
 
         setFlipX((prev) => {
             const nextFlip = p.facing === -1;
@@ -148,6 +162,8 @@ export function Game({ tileset }: Props) {
                 offsetY={32}
                 gapX={0}
                 gapY={0}
+                worldX={mapOffsetX}
+                worldY={mapOffsetY}
             />
 
             <Player

@@ -11,6 +11,9 @@ type TileMapProps = {
 
     gapX?: number;
     gapY?: number;
+
+    worldX?: number;
+    worldY?: number;
 };
 
 export function TileMap({
@@ -21,6 +24,8 @@ export function TileMap({
     offsetY = 32,
     gapX = 2,
     gapY = 2,
+    worldX = 0,
+    worldY = 0,
 }: TileMapProps) {
     const { sheetCols, tileCount } = useMemo(() => {
         const usableW = tileset.source.width - offsetX;
@@ -56,8 +61,8 @@ export function TileMap({
                         <pixiSprite
                             key={`${x}-${y}`}
                             texture={tileTextures[tileIndex]}
-                            x={x * tileSize}
-                            y={y * tileSize}
+                            x={worldX + x * tileSize}
+                            y={worldY + y * tileSize}
                         />
                     );
                 })
