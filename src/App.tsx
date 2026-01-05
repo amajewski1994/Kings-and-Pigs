@@ -4,9 +4,14 @@ import { useEffect, useState } from "react";
 import { Game } from "./Game";
 
 const tilesetUrl = "/assets/Sprites/14-TileSets/Terrain.png";
+const decorUrl = "/assets/Sprites/14-TileSets/Decorations.png";
+const doorUrl = "/assets/Sprites/11-Door/Idle.png";
 
 export default function App() {
   const [tileset, setTileset] = useState<Texture | null>(null);
+  const [decorTex, setDecorTex] = useState<Texture | null>(null);
+  const [doorTex, setDoorTex] = useState<Texture | null>(null);
+
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   useEffect(() => {
@@ -18,9 +23,19 @@ export default function App() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const tex = await Assets.load<Texture>(tilesetUrl);
-      tex.source.scaleMode = "nearest";
-      if (alive) setTileset(tex);
+      const [terrain, decor, door] = await Promise.all([
+        Assets.load<Texture>(tilesetUrl),
+        Assets.load<Texture>(decorUrl),
+        Assets.load<Texture>(doorUrl),
+      ]);
+
+      terrain.source.scaleMode = "nearest";
+      decor.source.scaleMode = "nearest";
+      door.source.scaleMode = "nearest";
+      if (!alive) return;
+      setTileset(terrain);
+      setDecorTex(decor);
+      setDoorTex(door);
     })();
     return () => {
       alive = false;
@@ -37,7 +52,7 @@ export default function App() {
         autoDensity
         resolution={window.devicePixelRatio || 1}
       >
-        {tileset && <Game tileset={tileset} screenW={size.w} screenH={size.h} />}
+        {tileset && decorTex && doorTex && <Game tileset={tileset} decorTex={decorTex} doorTex={doorTex} screenW={size.w} screenH={size.h} />}
       </Application>
     </div>
   );

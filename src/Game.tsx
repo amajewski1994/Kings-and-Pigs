@@ -6,14 +6,19 @@ import { useMemo, useRef, useState } from "react";
 import { Texture } from "pixi.js";
 
 import { TileMap } from "./components/TileMap";
+// import { TilePalette } from "./components/TilePalette";
 import { makeSampleShapeMap } from "./game/shapeGen";
 import { Player } from "./components/Player";
 import { useKeyboard } from "./components/useKeyboard";
 
 import { makeSolidSet, moveWithTileCollision } from "./game/collision";
+import { MapObjects } from "./components/MapObjects";
+import { OBJECTS } from "./game/objects";
 
 type Props = {
     tileset: Texture;
+    decorTex: Texture;
+    doorTex: Texture;
     screenW: number;
     screenH: number;
 };
@@ -22,7 +27,7 @@ const idleUrl = "/assets/Sprites/01-King Human/Idle.png";
 const runUrl = "/assets/Sprites/01-King Human/Run.png";
 const jumpUrl = "/assets/Sprites/01-King Human/Jump.png";
 
-export function Game({ tileset, screenW, screenH }: Props) {
+export function Game({ tileset, decorTex, doorTex, screenW, screenH }: Props) {
     const {
         SPEED,
         GRAVITY,
@@ -166,6 +171,15 @@ export function Game({ tileset, screenW, screenH }: Props) {
                 worldY={mapOffsetY}
             />
 
+            <MapObjects
+                objects={OBJECTS}
+                decorTex={decorTex}
+                doorTex={doorTex}
+                tileSize={TILE}
+                worldX={mapOffsetX}
+                worldY={mapOffsetY}
+            />
+
             <Player
                 x={playerX}
                 y={playerY}
@@ -176,6 +190,15 @@ export function Game({ tileset, screenW, screenH }: Props) {
                 jumpUrl={jumpUrl}
                 fps={10}
             />
+
+            {/* <TilePalette
+                tileset={decorTex}
+                tileSize={32}
+                offsetX={32}
+                offsetY={32}
+                gapX={0}
+                gapY={0}
+            /> */}
         </>
     );
 }
