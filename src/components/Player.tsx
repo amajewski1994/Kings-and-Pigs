@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Assets, Rectangle, Texture, AnimatedSprite } from "pixi.js";
 
-type AnimName = "idle" | "run" | "jump" | "attack";
+type AnimName = "idle" | "run" | "jump" | "attack" | "hit" | "dead";
 
 type PlayerProps = {
     x: number;
@@ -12,6 +12,8 @@ type PlayerProps = {
     runUrl: string;
     jumpUrl: string;
     attackUrl: string;
+    hitUrl: string;
+    deadUrl: string;
 
     onAnimComplete?: (name: AnimName) => void;
 
@@ -39,6 +41,8 @@ export function Player({
     runUrl,
     jumpUrl,
     attackUrl,
+    hitUrl,
+    deadUrl,
     frameW = 78,
     frameH = 58,
     fps = 10,
@@ -49,6 +53,8 @@ export function Player({
     const [runFrames, setRunFrames] = useState<Texture[] | null>(null);
     const [jumpFrames, setJumpFrames] = useState<Texture[] | null>(null);
     const [attackFrames, setAttackFrames] = useState<Texture[] | null>(null);
+    const [hitFrames, setHitFrames] = useState<Texture[] | null>(null);
+    const [deadFrames, setDeadFrames] = useState<Texture[] | null>(null);
 
     const spriteRef = useRef<AnimatedSprite | null>(null);
 
@@ -57,22 +63,28 @@ export function Player({
 
         (async () => {
             try {
-                const [idleTex, runTex, jumpTex, attackTex] = await Promise.all([
+                const [idleTex, runTex, jumpTex, attackTex, hitTex, deadTex] = await Promise.all([
                     Assets.load<Texture>(idleUrl),
                     Assets.load<Texture>(runUrl),
                     Assets.load<Texture>(jumpUrl),
                     Assets.load<Texture>(attackUrl),
+                    Assets.load<Texture>(hitUrl),
+                    Assets.load<Texture>(deadUrl),
                 ]);
 
                 idleTex.source.scaleMode = "nearest";
                 runTex.source.scaleMode = "nearest";
                 jumpTex.source.scaleMode = "nearest";
                 attackTex.source.scaleMode = "nearest";
+                hitTex.source.scaleMode = "nearest";
+                deadTex.source.scaleMode = "nearest";
 
                 const idle = sliceHorizontalSheet(idleTex, frameW, frameH);
                 const run = sliceHorizontalSheet(runTex, frameW, frameH);
                 const jump = sliceHorizontalSheet(jumpTex, frameW, frameH);
                 const attack = sliceHorizontalSheet(attackTex, frameW, frameH);
+                const hit = sliceHorizontalSheet(hitTex, frameW, frameH);
+                const dead = sliceHorizontalSheet(deadTex, frameW, frameH);
 
                 if (!alive) return;
 
@@ -80,6 +92,8 @@ export function Player({
                 setRunFrames(run);
                 setJumpFrames(jump);
                 setAttackFrames(attack);
+                setHitFrames(hit);
+                setDeadFrames(dead);
             } catch (e) {
                 console.error("Failed to load player sprites:", e);
             }
@@ -88,14 +102,18 @@ export function Player({
         return () => {
             alive = false;
         };
-    }, [idleUrl, runUrl, jumpUrl, attackUrl, frameW, frameH]);
+    }, [idleUrl, runUrl, jumpUrl, attackUrl, hitUrl, deadUrl, frameW, frameH]);
 
     const textures = useMemo(() => {
-        if (anim === "idle") return idleFrames;
-        if (anim === "run") return runFrames;
-        if (anim === "jump") return jumpFrames;
-        return attackFrames;
-    }, [anim, idleFrames, runFrames, jumpFrames, attackFrames]);
+        switch (anim) {
+            case "idle": return idleFrames;
+            case "run": return runFrames;
+            case "jump": return jumpFrames;
+            case "attack": return attackFrames;
+            case "hit": return hitFrames;
+            case "dead": return deadFrames;
+        }
+    }, [anim, idleFrames, runFrames, jumpFrames, attackFrames, hitFrames, deadFrames]);
 
     const animationSpeed = fps / 60;
 
@@ -111,14 +129,13 @@ export function Player({
             s.textures = textures;
         }
 
-        const isOneShot = anim === "jump" || anim === "attack";
+        const isOneShot = anim === "jump" || anim === "attack" || anim === "hit" || anim === "dead";
         s.loop = !isOneShot;
         s.animationSpeed = animationSpeed;
 
         s.onComplete = undefined;
-        if (anim === "attack") {
-            s.onComplete = () => onAnimComplete?.("attack");
-        }
+        if (anim === "attack") s.onComplete = () => onAnimComplete?.("attack");
+        if (anim === "hit") s.onComplete = () => onAnimComplete?.("hit");
 
         if (animChanged) {
             s.gotoAndPlay(0);

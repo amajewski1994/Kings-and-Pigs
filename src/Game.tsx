@@ -19,6 +19,8 @@ const playerIdleUrl = "/assets/Sprites/01-King Human/Idle.png";
 const playerRunUrl = "/assets/Sprites/01-King Human/Run.png";
 const playerJumpUrl = "/assets/Sprites/01-King Human/Jump.png";
 const playerAttackUrl = "/assets/Sprites/01-King Human/Attack.png";
+const playerHitUrl = "/assets/Sprites/01-King Human/Hit.png";
+const playerDeadUrl = "/assets/Sprites/01-King Human/Dead.png";
 
 type Props = {
     tileset: Texture;
@@ -80,8 +82,13 @@ export function Game({
 
     const [playerX, setPlayerX] = useState(startX);
     const [playerY, setPlayerY] = useState(groundY);
-    const [anim, setAnim] = useState<"idle" | "run" | "jump" | "attack">("idle");
+    const [anim, setAnim] = useState<
+        "idle" | "run" | "jump" | "attack" | "hit" | "dead"
+    >("idle");
     const [isAttacking, setIsAttacking] = useState(false);
+    const [isHit, setIsHit] = useState(false);
+    const [isDead, setIsDead] = useState(false);
+
     const [flipX, setFlipX] = useState(false);
 
     useEffect(() => {
@@ -95,6 +102,16 @@ export function Game({
 
         window.addEventListener("mousedown", onMouseDown);
         return () => window.removeEventListener("mousedown", onMouseDown);
+    }, []);
+
+    // TEST HIT AND DEAD
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.code === "KeyH") setIsHit(true);     // test "Hit"
+            if (e.code === "KeyK") setIsDead(true);    // test "Dead"
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
     }, []);
 
     const phys = useRef({
@@ -122,20 +139,25 @@ export function Game({
         const k = keysRef.current;
         const p = phys.current;
 
+        const allowInput = !isDead;
+
         let dir = 0;
-        if (k.left) dir -= 1;
-        if (k.right) dir += 1;
+        if (allowInput) {
+            if (k.left) dir -= 1;
+            if (k.right) dir += 1;
+        }
 
         p.vx = dir * SPEED;
 
-        if (dir !== 0) p.facing = dir < 0 ? -1 : 1;
+        if (allowInput && dir !== 0) p.facing = dir < 0 ? -1 : 1;
 
         // jump
-        if (k.jump && p.grounded && !p.jumpLock) {
+        if (allowInput && k.jump && p.grounded && !p.jumpLock) {
             p.vy = -JUMP_V;
             p.grounded = false;
             p.jumpLock = true;
         }
+
         if (!k.jump) p.jumpLock = false;
 
         if (!p.grounded) {
@@ -175,8 +197,12 @@ export function Game({
         const nextAnimBase: "idle" | "run" | "jump" =
             !p.grounded ? "jump" : dir !== 0 ? "run" : "idle";
 
-        const nextAnim: "idle" | "run" | "jump" | "attack" =
-            isAttacking ? "attack" : nextAnimBase;
+        const nextAnim =
+            isDead ? "dead" :
+                isHit ? "hit" :
+                    isAttacking ? "attack" :
+                        nextAnimBase;
+
         setAnim((prev) => (prev === nextAnim ? prev : nextAnim));
     });
 
@@ -211,9 +237,12 @@ export function Game({
                 runUrl={playerRunUrl}
                 jumpUrl={playerJumpUrl}
                 attackUrl={playerAttackUrl}
+                hitUrl={playerHitUrl}
+                deadUrl={playerDeadUrl}
                 fps={10}
                 onAnimComplete={(name) => {
                     if (name === "attack") setIsAttacking(false);
+                    if (name === "hit") setIsHit(false);
                 }}
             />
 
