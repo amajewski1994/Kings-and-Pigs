@@ -1,12 +1,16 @@
+import { PLAYER_CONFIG } from "./config/player";
+import { WORLD_CONFIG } from "./config/world";
+
 import { useTick } from "@pixi/react";
 import { useMemo, useRef, useState } from "react";
 import { Texture } from "pixi.js";
-import type { Ticker } from "pixi.js";
 
 import { TileMap } from "./components/TileMap";
 import { makeSampleShapeMap } from "./game/shapeGen";
 import { Player } from "./components/Player";
 import { useKeyboard } from "./components/useKeyboard";
+
+import { makeSolidSet, moveWithTileCollision } from "./game/collision";
 
 type Props = { tileset: Texture };
 
@@ -35,6 +39,14 @@ export function Game({ tileset }: Props) {
         []
     );
 
+    const solid = useMemo(() => makeSolidSet({
+        tl: 6, t: 37, tr: 7,
+        l: 20, r: 18,
+        bl: 24, b: 1, br: 25,
+        innerTL: 0, innerTR: 2, innerBL: 36, innerBR: 38,
+    }), []);
+
+
     const startX = 400;
     const groundY = 300;
 
@@ -55,12 +67,18 @@ export function Game({ tileset }: Props) {
 
     const keysRef = useKeyboard();
 
-    const SPEED = 180;
-    const GRAVITY = 1400;
-    const JUMP_V = 520;
+    const {
+        SPEED,
+        GRAVITY,
+        JUMP_V,
+        HITBOX: { W: PLAYER_W, H: PLAYER_H },
+        RENDER: { OFF_X: RENDER_OFF_X, OFF_Y: RENDER_OFF_Y },
+    } = PLAYER_CONFIG;
 
-    useTick((ticker: Ticker) => {
-        const dtRaw = ticker.deltaMS / 1000;
+    const { TILE } = WORLD_CONFIG;
+
+    useTick((Ticker) => {
+        const dtRaw = Ticker.deltaMS / 1000;
         const dt = Math.min(dtRaw, 1 / 20);
 
         const k = keysRef.current;
@@ -72,10 +90,9 @@ export function Game({ tileset }: Props) {
 
         p.vx = dir * SPEED;
 
-        if (dir !== 0) {
-            p.facing = dir < 0 ? -1 : 1;
-        }
+        if (dir !== 0) p.facing = dir < 0 ? -1 : 1;
 
+        // jump
         if (k.jump && p.grounded && !p.jumpLock) {
             p.vy = -JUMP_V;
             p.grounded = false;
@@ -83,38 +100,41 @@ export function Game({ tileset }: Props) {
         }
         if (!k.jump) p.jumpLock = false;
 
-        p.vy += GRAVITY * dt;
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-
-        if (p.y >= groundY) {
-            p.y = groundY;
-            p.vy = 0;
-            p.grounded = true;
+        if (!p.grounded) {
+            p.vy += GRAVITY * dt;
+        } else {
+            p.vy = 0; // stay on the ground
         }
 
-        if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.vy)) {
-            console.error("Player position exploded:", {
-                x: p.x, y: p.y, vx: p.vx, vy: p.vy, dtRaw, dt
-            });
-            p.x = 200;
-            p.y = groundY;
-            p.vx = 0;
-            p.vy = 0;
-            p.grounded = true;
-        }
+        // collision
+        const rect = { x: p.x, y: p.y, w: PLAYER_W, h: PLAYER_H };
+        const res = moveWithTileCollision({
+            map,
+            solid,
+            tileSize: TILE,
+            rect,
+            vx: p.vx,
+            vy: p.vy,
+            dt,
+        });
 
-        p.x = Math.max(0, Math.min(p.x, 1000));
-        p.y = Math.max(0, Math.min(p.y, 720));
+        p.x = res.rect.x;
+        p.y = res.rect.y;
+        p.vx = res.vx;
+        p.vy = res.vy;
+        p.grounded = res.grounded;
 
-        setPlayerX(p.x);
-        setPlayerY(p.y);
+        const renderX = Math.round(p.x + PLAYER_W / 2 + RENDER_OFF_X);
+        const renderY = Math.round(p.y + PLAYER_H + RENDER_OFF_Y);
+        setPlayerX(renderX);
+        setPlayerY(renderY);
 
-        const nextFlip = p.facing === -1;
-        setFlipX((prev) => (prev === nextFlip ? prev : nextFlip));
+        setFlipX((prev) => {
+            const nextFlip = p.facing === -1;
+            return prev === nextFlip ? prev : nextFlip;
+        });
 
-        const nextAnim: "idle" | "run" | "jump" =
-            !p.grounded ? "jump" : dir !== 0 ? "run" : "idle";
+        const nextAnim: "idle" | "run" | "jump" = !p.grounded ? "jump" : dir !== 0 ? "run" : "idle";
         setAnim((prev) => (prev === nextAnim ? prev : nextAnim));
     });
 

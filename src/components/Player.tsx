@@ -88,15 +88,30 @@ export function Player({
 
     const animationSpeed = fps / 60;
 
+    const prevAnim = useRef<AnimName | null>(null);
+
     useEffect(() => {
         const s = spriteRef.current;
         if (!s || !textures) return;
 
-        s.textures = textures;
+        const animChanged = prevAnim.current !== anim;
+
+        if (s.textures !== textures) {
+            s.textures = textures;
+        }
+
         s.loop = anim !== "jump";
         s.animationSpeed = animationSpeed;
-        s.gotoAndPlay(0);
-    }, [textures, anim, animationSpeed]);
+
+        if (animChanged) {
+            s.gotoAndPlay(0);
+            prevAnim.current = anim;
+        } else {
+            if (!s.playing) s.play();
+        }
+    }, [anim, textures, animationSpeed]);
+
+
 
     if (!textures) return null;
 
