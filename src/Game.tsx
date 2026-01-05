@@ -15,19 +15,23 @@ import { makeSolidSet, moveWithTileCollision } from "./game/collision";
 import { MapObjects } from "./components/MapObjects";
 import { OBJECTS } from "./game/objects";
 
+const playerIdleUrl = "/assets/Sprites/01-King Human/Idle.png";
+const playerRunUrl = "/assets/Sprites/01-King Human/Run.png";
+const playerJumpUrl = "/assets/Sprites/01-King Human/Jump.png";
+
 type Props = {
     tileset: Texture;
     decorTex: Texture;
-    doorTex: Texture;
     screenW: number;
     screenH: number;
 };
 
-const idleUrl = "/assets/Sprites/01-King Human/Idle.png";
-const runUrl = "/assets/Sprites/01-King Human/Run.png";
-const jumpUrl = "/assets/Sprites/01-King Human/Jump.png";
-
-export function Game({ tileset, decorTex, doorTex, screenW, screenH }: Props) {
+export function Game({
+    tileset,
+    decorTex,
+    screenW,
+    screenH
+}: Props) {
     const {
         SPEED,
         GRAVITY,
@@ -174,7 +178,6 @@ export function Game({ tileset, decorTex, doorTex, screenW, screenH }: Props) {
             <MapObjects
                 objects={OBJECTS}
                 decorTex={decorTex}
-                doorTex={doorTex}
                 tileSize={TILE}
                 worldX={mapOffsetX}
                 worldY={mapOffsetY}
@@ -185,9 +188,9 @@ export function Game({ tileset, decorTex, doorTex, screenW, screenH }: Props) {
                 y={playerY}
                 anim={anim}
                 flipX={flipX}
-                idleUrl={idleUrl}
-                runUrl={runUrl}
-                jumpUrl={jumpUrl}
+                idleUrl={playerIdleUrl}
+                runUrl={playerRunUrl}
+                jumpUrl={playerJumpUrl}
                 fps={10}
             />
 

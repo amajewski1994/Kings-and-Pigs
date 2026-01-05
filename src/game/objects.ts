@@ -6,7 +6,7 @@ export type MapObject = {
     tx: number;
     ty: number;
 
-    prefabId?: string; // <-- zamiast frameIndex
+    prefabId?: string;
     z?: number;
 };
 
@@ -18,5 +18,5 @@ export const OBJECTS: MapObject[] = [
     { id: "pillarA", kind: "decor", tx: 12, ty: 7, prefabId: "pillarA", z: 0 },
     { id: "pillarB", kind: "decor", tx: 14.5, ty: 7, prefabId: "pillarB", z: 0 },
     { id: "pillarC", kind: "decor", tx: 17, ty: 7, prefabId: "pillarA", z: 0 },
-    { id: "doorA", kind: "door", tx: 20, ty: 11, z: 0 },
+    { id: "doorA", kind: "door", tx: 20, ty: 10, z: 0 },
 ];
