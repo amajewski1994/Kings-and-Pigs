@@ -50,15 +50,19 @@ export function TileMap({
     return (
         <pixiContainer>
             {map.map((row, y) =>
-                row.map((tileIndex, x) => (
-                    <pixiSprite
-                        key={`${x}-${y}`}
-                        texture={tileTextures[tileIndex]}
-                        x={x * tileSize}
-                        y={y * tileSize}
-                    />
-                ))
+                row.map((tileIndex, x) => {
+                    if (tileIndex < 0) return null; // <-- puste pole = nie rysujemy
+                    return (
+                        <pixiSprite
+                            key={`${x}-${y}`}
+                            texture={tileTextures[tileIndex]}
+                            x={x * tileSize}
+                            y={y * tileSize}
+                        />
+                    );
+                })
             )}
+
         </pixiContainer>
     );
 }

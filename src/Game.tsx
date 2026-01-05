@@ -4,7 +4,7 @@ import { Texture } from "pixi.js";
 import type { Ticker } from "pixi.js";
 
 import { TileMap } from "./components/TileMap";
-import { makeRoomMap } from "./game/mapGen";
+import { makeSampleShapeMap } from "./game/shapeGen";
 import { Player } from "./components/Player";
 import { useKeyboard } from "./components/useKeyboard";
 
@@ -17,15 +17,20 @@ const jumpUrl = "/assets/Sprites/01-King Human/Jump.png";
 export function Game({ tileset }: Props) {
     const map = useMemo(
         () =>
-            makeRoomMap(25, 15, 127, {
-                tl: 0,
-                t: 1,
-                tr: 2,
-                l: 18,
-                r: 20,
-                bl: 36,
-                b: 37,
-                br: 38,
+            makeSampleShapeMap(25, 15, 127, {
+                tl: 6,
+                t: 37,
+                tr: 7,
+                l: 20,
+                r: 18,
+                bl: 24,
+                b: 1,
+                br: 25,
+
+                innerTL: 0,
+                innerTR: 2,
+                innerBL: 36,
+                innerBR: 38,
             }),
         []
     );
