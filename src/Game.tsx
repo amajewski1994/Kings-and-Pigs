@@ -2,7 +2,7 @@ import { PLAYER_CONFIG } from "./config/player";
 import { WORLD_CONFIG } from "./config/world";
 
 import { useTick } from "@pixi/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useLayoutEffect } from "react";
 import { Texture } from "pixi.js";
 
 import { TileMap } from "./components/TileMap";
@@ -191,6 +191,8 @@ export function Game({
         enemyAtkCooldownT: 0,
     });
 
+    const mapOffsetRef = useRef({ x: 0, y: 0 });
+
     const keysRef = useKeyboard();
 
     const mapPxW = MAP_W * TILE;
@@ -198,6 +200,11 @@ export function Game({
 
     const mapOffsetX = Math.floor((screenW - mapPxW) / 2);
     const mapOffsetY = Math.floor((screenH - mapPxH) / 2);
+
+    useLayoutEffect(() => {
+        mapOffsetRef.current.x = mapOffsetX;
+        mapOffsetRef.current.y = mapOffsetY;
+    }, [mapOffsetX, mapOffsetY]);
 
     const inMeleeRange = (ax: number, ay: number, bx: number, by: number) => {
         return Math.abs(ax - bx) <= ATTACK_RANGE_X && Math.abs(ay - by) <= ATTACK_RANGE_Y;
@@ -271,8 +278,6 @@ export function Game({
 
         const pRenderX = Math.round(p.x + PLAYER_W / 2 + RENDER_OFF_X);
         const pRenderY = Math.round(p.y + PLAYER_H + RENDER_OFF_Y);
-        setPlayerX(mapOffsetX + pRenderX);
-        setPlayerY(mapOffsetY + pRenderY);
 
         setFlipPlayerX((prev) => {
             const nextFlip = p.facing === -1;
@@ -299,8 +304,15 @@ export function Game({
         const eRenderX = Math.round(ep.x + PLAYER_W / 2 + RENDER_OFF_X);
         const eRenderY = Math.round(ep.y + PLAYER_H + RENDER_OFF_Y);
 
-        setEnemyX(mapOffsetX + eRenderX);
-        setEnemyY(mapOffsetY + eRenderY);
+
+        const offX = mapOffsetRef.current.x;
+        const offY = mapOffsetRef.current.y;
+
+        setPlayerX(offX + pRenderX);
+        setPlayerY(offY + pRenderY);
+
+        setEnemyX(offX + eRenderX);
+        setEnemyY(offY + eRenderY);
 
         if (!isEnemyDead) {
             setFlipEnemyX(ep.facing === -1);
@@ -321,8 +333,6 @@ export function Game({
         } else {
             ep.vx = 0;
         }
-
-        setEnemyX(ep.x);
 
         const canEnemyAct = !isEnemyDead && !isPlayerDead;
 
