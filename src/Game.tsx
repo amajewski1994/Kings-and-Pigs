@@ -15,6 +15,7 @@ import { useKeyboard } from "./components/useKeyboard";
 import { makeSolidSet, moveWithTileCollision } from "./game/collision";
 import { MapObjects } from "./components/MapObjects";
 import { OBJECTS } from "./game/objects";
+import { HPBar } from "./components/HPBar";
 
 const playerIdleUrl = "/assets/Sprites/01-King Human/Idle.png";
 const playerRunUrl = "/assets/Sprites/01-King Human/Run.png";
@@ -375,6 +376,22 @@ export function Game({
                 tileSize={TILE}
                 worldX={mapOffsetX}
                 worldY={mapOffsetY}
+            />
+
+            <HPBar
+                x={playerX}
+                y={playerY}
+                hp={playerHp}
+                maxHp={PLAYER_MAX_HP}
+                flipX={flipPlayerX}
+            />
+
+            <HPBar
+                x={enemyX}
+                y={enemyY}
+                hp={enemyHp}
+                maxHp={ENEMY_MAX_HP}
+                flipX={flipEnemyX}
             />
 
             <Enemy
