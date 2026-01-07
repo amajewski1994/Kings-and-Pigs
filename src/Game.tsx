@@ -37,12 +37,15 @@ const ENEMY_MAX_HP = 60;
 const DAMAGE_PLAYER = 10;
 const DAMAGE_ENEMY = 12;
 
-const ATTACK_RANGE_X = 55;     // zasięg w px w poziomie
-const ATTACK_RANGE_Y = 40;     // tolerancja w pionie
-const ATTACK_WINDUP = 0.12;    // od startu animacji do aktywnego hitboxa
-const ATTACK_ACTIVE = 0.12;    // długość aktywnego okna
-const IFRAME_TIME = 0.25;      // krótkie "nieśmiertelne" po trafieniu
+const ATTACK_RANGE_X = 55;
+const ATTACK_RANGE_Y = 40;
+const ATTACK_WINDUP = 0.12;
+const ATTACK_ACTIVE = 0.12;
+const IFRAME_TIME = 0.25;
 const ENEMY_ATK_COOLDOWN = 0.8;
+
+const ENEMY_SPEED = 90;
+const ENEMY_STOP_DIST = 45;
 
 type Props = {
     tileset: Texture;
@@ -130,6 +133,7 @@ export function Game({
     const [flipEnemyX, setFlipEnemyX] = useState(false);
 
     const [enemyHp, setEnemyHp] = useState(ENEMY_MAX_HP);
+    const [enemyAggro, setEnemyAggro] = useState(false);
 
     useEffect(() => {
         const onMouseDown = (e: MouseEvent) => {
@@ -149,18 +153,28 @@ export function Game({
         const onKeyDown = (e: KeyboardEvent) => {
             if (e.code === "KeyH") setIsPlayerHit(true);     // test "Hit"
             if (e.code === "KeyK") setIsPlayerDead(true);    // test "Dead"
+            if (e.code === "KeyE") setEnemyAggro((v) => !v); // test "Aggro"
         };
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
     }, []);
 
-    const phys = useRef({
+    const playerPhys = useRef({
         x: startPlayerX,
         y: groundY,
         vx: 0,
         vy: 0,
         grounded: true,
         jumpLock: false,
+        facing: 1 as 1 | -1,
+    });
+
+    const enemyPhys = useRef({
+        x: startEnemyX,
+        y: groundY,
+        vx: 0,
+        vy: 0,
+        grounded: true,
         facing: 1 as 1 | -1,
     });
 
@@ -194,15 +208,17 @@ export function Game({
         const dt = Math.min(dtRaw, 1 / 20);
 
         const k = keysRef.current;
-        const p = phys.current;
+        const p = playerPhys.current;
+        const ep = enemyPhys.current;
+        const c = combatRef.current;
 
         const allowInput = !isPlayerDead;
-
-        const c = combatRef.current;
 
         c.playerIFramesT = Math.max(0, c.playerIFramesT - dt);
         c.enemyIFramesT = Math.max(0, c.enemyIFramesT - dt);
         c.enemyAtkCooldownT = Math.max(0, c.enemyAtkCooldownT - dt);
+
+        if (isPlayerDead && isEnemyAttacking) setIsEnemyAttacking(false);
 
         let dir = 0;
         if (allowInput) {
@@ -229,45 +245,94 @@ export function Game({
             p.vy = 0; // stay on the ground
         }
 
+        if (!ep.grounded) {
+            ep.vy += GRAVITY * dt;
+        } else {
+            ep.vy = 0;
+        }
+
         // collision
-        const rect = { x: p.x, y: p.y, w: PLAYER_W, h: PLAYER_H };
-        const res = moveWithTileCollision({
+        const pRect = { x: p.x, y: p.y, w: PLAYER_W, h: PLAYER_H };
+        const pRes = moveWithTileCollision({
             map,
             solid,
             tileSize: TILE,
-            rect,
+            rect: pRect,
             vx: p.vx,
             vy: p.vy,
             dt,
         });
 
-        p.x = res.rect.x;
-        p.y = res.rect.y;
-        p.vx = res.vx;
-        p.vy = res.vy;
-        p.grounded = res.grounded;
+        p.x = pRes.rect.x;
+        p.y = pRes.rect.y;
+        p.vx = pRes.vx;
+        p.vy = pRes.vy;
+        p.grounded = pRes.grounded;
 
-        const renderX = Math.round(p.x + PLAYER_W / 2 + RENDER_OFF_X);
-        const renderY = Math.round(p.y + PLAYER_H + RENDER_OFF_Y);
-        setPlayerX(mapOffsetX + renderX);
-        setPlayerY(mapOffsetY + renderY);
-        setEnemyY(mapOffsetY + renderY);
+        const pRenderX = Math.round(p.x + PLAYER_W / 2 + RENDER_OFF_X);
+        const pRenderY = Math.round(p.y + PLAYER_H + RENDER_OFF_Y);
+        setPlayerX(mapOffsetX + pRenderX);
+        setPlayerY(mapOffsetY + pRenderY);
 
         setFlipPlayerX((prev) => {
             const nextFlip = p.facing === -1;
             return prev === nextFlip ? prev : nextFlip;
         });
 
-        setFlipEnemyX(() => enemyX > playerX);
+        const eRect = { x: ep.x, y: ep.y, w: PLAYER_W, h: PLAYER_H };
+        const eRes = moveWithTileCollision({
+            map,
+            solid,
+            tileSize: TILE,
+            rect: eRect,
+            vx: ep.vx,
+            vy: ep.vy,
+            dt,
+        });
 
-        const canEnemyAct = !isEnemyDead;
+        ep.x = eRes.rect.x;
+        ep.y = eRes.rect.y;
+        ep.vx = eRes.vx;
+        ep.vy = eRes.vy;
+        ep.grounded = eRes.grounded;
+
+        const eRenderX = Math.round(ep.x + PLAYER_W / 2 + RENDER_OFF_X);
+        const eRenderY = Math.round(ep.y + PLAYER_H + RENDER_OFF_Y);
+
+        setEnemyX(mapOffsetX + eRenderX);
+        setEnemyY(mapOffsetY + eRenderY);
+
+        if (!isEnemyDead) {
+            setFlipEnemyX(ep.facing === -1);
+        }
+
+        if (enemyAggro && !isEnemyDead && !isEnemyHit && !isPlayerDead) {
+            const dx = p.x - ep.x;
+            const absDx = Math.abs(dx);
+            const dirE = dx < 0 ? -1 : 1;
+
+            ep.facing = dirE as 1 | -1;
+
+            if (!isEnemyAttacking && absDx > ENEMY_STOP_DIST) {
+                ep.vx = dirE * ENEMY_SPEED;
+            } else {
+                ep.vx = 0;
+            }
+        } else {
+            ep.vx = 0;
+        }
+
+        setEnemyX(ep.x);
+
+        const canEnemyAct = !isEnemyDead && !isPlayerDead;
 
         if (
+            enemyAggro &&
             canEnemyAct &&
             !isEnemyAttacking &&
             !isEnemyHit &&
             c.enemyAtkCooldownT <= 0 &&
-            inMeleeRange(enemyX, enemyY, playerX, playerY)
+            inMeleeRange(ep.x, ep.y, p.x, p.y)
         ) {
             setIsEnemyAttacking(true);
             c.enemyAtkT = 0;
@@ -300,7 +365,7 @@ export function Game({
             !c.playerDidHitThisSwing &&
             !isEnemyDead &&
             c.enemyIFramesT <= 0 &&
-            inMeleeRange(playerX, playerY, enemyX, enemyY)
+            inMeleeRange(p.x, p.y, ep.x, ep.y)
         ) {
             c.playerDidHitThisSwing = true;
             c.enemyIFramesT = IFRAME_TIME;
@@ -311,8 +376,6 @@ export function Game({
                 else setIsEnemyHit(true);
                 return next;
             });
-
-            console.log(enemyHp)
         }
 
         if (
@@ -320,7 +383,7 @@ export function Game({
             !c.enemyDidHitThisSwing &&
             !isPlayerDead &&
             c.playerIFramesT <= 0 &&
-            inMeleeRange(enemyX, enemyY, playerX, playerY)
+            inMeleeRange(ep.x, ep.y, p.x, p.y)
         ) {
             c.enemyDidHitThisSwing = true;
             c.playerIFramesT = IFRAME_TIME;
@@ -345,7 +408,8 @@ export function Game({
         setPlayerAnim((prev) => (prev === nextPlayerAnim ? prev : nextPlayerAnim));
 
         const nextEnemyAnimBase: "idle" | "run" | "jump" =
-            !p.grounded ? "jump" : dir !== 0 ? "run" : "idle";
+            !ep.grounded ? "jump" :
+                ep.vx !== 0 ? "run" : "idle";
 
         const nextEnemyAnim =
             isEnemyDead ? "dead" :
@@ -379,19 +443,19 @@ export function Game({
             />
 
             <HPBar
-                x={playerX}
-                y={playerY}
-                hp={playerHp}
-                maxHp={PLAYER_MAX_HP}
-                flipX={flipPlayerX}
-            />
-
-            <HPBar
                 x={enemyX}
                 y={enemyY}
                 hp={enemyHp}
                 maxHp={ENEMY_MAX_HP}
                 flipX={flipEnemyX}
+            />
+
+            <HPBar
+                x={playerX}
+                y={playerY}
+                hp={playerHp}
+                maxHp={PLAYER_MAX_HP}
+                flipX={flipPlayerX}
             />
 
             <Enemy
