@@ -160,7 +160,7 @@ export function Enemy({
             textures={textures}
             x={x}
             y={y}
-            anchor={{ x: 0.5, y: 1.35 }}
+            anchor={{ x: 0.5, y: 1.4 }}
             scale={{ x: flipX ? 1.3 : -1.3, y: 1.3 }}
         />
     );

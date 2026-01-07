@@ -76,7 +76,7 @@ export function Game({
 
     const map = useMemo(
         () =>
-            makeSampleShapeMap(25, 15, 127, {
+            makeSampleShapeMap(MAP_W, MAP_H, 127, {
                 tl: 6,
                 t: 37,
                 tr: 7,
@@ -102,13 +102,15 @@ export function Game({
     }), []);
 
 
-    const startPlayerX = 400;
+    const startPlayerX = 200;
+    const startPlayerY = 200;
     const startEnemyX = 600;
-    const groundY = 300;
+    const startEnemyY = 200;
+    const groundY = 190;
 
     // PLAYER STATES
     const [playerX, setPlayerX] = useState(startPlayerX);
-    const [playerY, setPlayerY] = useState(groundY);
+    const [playerY, setPlayerY] = useState(startPlayerY);
     const [playerAnim, setPlayerAnim] = useState<
         "idle" | "run" | "jump" | "attack" | "hit" | "dead"
     >("idle");
@@ -122,7 +124,7 @@ export function Game({
 
     // ENEMY STATES
     const [enemyX, setEnemyX] = useState(startEnemyX);
-    const [enemyY, setEnemyY] = useState(groundY);
+    const [enemyY, setEnemyY] = useState(startEnemyY);
     const [enemyAnim, setEnemyAnim] = useState<
         "idle" | "run" | "jump" | "attack" | "hit" | "dead"
     >("idle");
@@ -277,7 +279,7 @@ export function Game({
         p.grounded = pRes.grounded;
 
         const pRenderX = Math.round(p.x + PLAYER_W / 2 + RENDER_OFF_X);
-        const pRenderY = Math.round(p.y + PLAYER_H + RENDER_OFF_Y);
+        const pRenderY = Math.floor(p.y + PLAYER_H + RENDER_OFF_Y);
 
         setFlipPlayerX((prev) => {
             const nextFlip = p.facing === -1;
@@ -302,8 +304,7 @@ export function Game({
         ep.grounded = eRes.grounded;
 
         const eRenderX = Math.round(ep.x + PLAYER_W / 2 + RENDER_OFF_X);
-        const eRenderY = Math.round(ep.y + PLAYER_H + RENDER_OFF_Y);
-
+        const eRenderY = Math.floor(ep.y + PLAYER_H + RENDER_OFF_Y);
 
         const offX = mapOffsetRef.current.x;
         const offY = mapOffsetRef.current.y;
