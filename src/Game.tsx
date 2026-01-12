@@ -33,11 +33,22 @@ const enemyAttackUrl = "/assets/Sprites/03-Pig/Attack.png";
 const enemyHitUrl = "/assets/Sprites/03-Pig/Hit.png";
 const enemyDeadUrl = "/assets/Sprites/03-Pig/Dead.png";
 
+const kingEnemyIdleUrl = "/assets/Sprites/02-King Pig/Idle.png";
+const kingEnemyRunUrl = "/assets/Sprites/02-King Pig/Run.png";
+const kingEnemyJumpUrl = "/assets/Sprites/02-King Pig/Jump.png";
+const kingEnemyAttackUrl = "/assets/Sprites/02-King Pig/Attack.png";
+const kingEnemyHitUrl = "/assets/Sprites/02-King Pig/Hit.png";
+const kingEnemyDeadUrl = "/assets/Sprites/02-King Pig/Dead.png";
+
 const PLAYER_MAX_HP = 100;
 const ENEMY_MAX_HP = 60;
 
-const DAMAGE_PLAYER = 10;
+const DAMAGE_PLAYER = 60;
 const DAMAGE_ENEMY = 12;
+
+const KING_MAX_HP = 160;
+const KING_DAMAGE = 18;
+const KING_SPEED = 105;
 
 const ATTACK_RANGE_X = 55;
 const ATTACK_RANGE_Y = 40;
@@ -82,6 +93,8 @@ export function Game({
     const startPlayerY = 200;
     const startEnemyX = 600;
     const startEnemyY = 200;
+    const startEnemy2X = 500;
+    const startEnemy2Y = 200;
     const groundY = 190;
 
     // PLAYER STATES
@@ -113,6 +126,16 @@ export function Game({
     const [enemyHp, setEnemyHp] = useState(ENEMY_MAX_HP);
     const [enemyAggro, setEnemyAggro] = useState(false);
 
+    const [enemy2X, setEnemy2X] = useState(startEnemy2X);
+    const [enemy2Y, setEnemy2Y] = useState(startEnemy2Y);
+    const [enemy2Anim, setEnemy2Anim] = useState<"idle" | "run" | "jump" | "attack" | "hit" | "dead">("idle");
+    const [isEnemy2Attacking, setIsEnemy2Attacking] = useState(false);
+    const [isEnemy2Hit, setIsEnemy2Hit] = useState(false);
+    const [isEnemy2Dead, setIsEnemy2Dead] = useState(false);
+    const [flipEnemy2X, setFlipEnemy2X] = useState(false);
+    const [enemy2Hp, setEnemy2Hp] = useState(ENEMY_MAX_HP);
+    const [enemy2Aggro, setEnemy2Aggro] = useState(false);
+
     const [levelIndex, setLevelIndex] = useState<0 | 1 | 2>(0);
     const [phase, setPhase] = useState<"play" | "doorIn" | "doorOut">("play");
     const [doorAState, setDoorAState] = useState<"idle" | "opening" | "closing">("idle");
@@ -120,6 +143,41 @@ export function Game({
 
     const mapOffsetRef = useRef({ x: 0, y: 0 });
     const transitionedRef = useRef(false);
+
+    const isBossLevel = levelIndex === 2;
+    const enemy1Profile = isBossLevel
+        ? {
+            maxHp: KING_MAX_HP,
+            damage: KING_DAMAGE,
+            speed: KING_SPEED,
+            frameW: 38,
+            frameH: 28,
+            urls: {
+                idleUrl: kingEnemyIdleUrl,
+                runUrl: kingEnemyRunUrl,
+                jumpUrl: kingEnemyJumpUrl,
+                attackUrl: kingEnemyAttackUrl,
+                hitUrl: kingEnemyHitUrl,
+                deadUrl: kingEnemyDeadUrl,
+            },
+        }
+        : {
+            maxHp: ENEMY_MAX_HP,
+            damage: DAMAGE_ENEMY,
+            speed: ENEMY_SPEED,
+            frameW: 34,
+            frameH: 28,
+            urls: {
+                idleUrl: enemyIdleUrl,
+                runUrl: enemyRunUrl,
+                jumpUrl: enemyJumpUrl,
+                attackUrl: enemyAttackUrl,
+                hitUrl: enemyHitUrl,
+                deadUrl: enemyDeadUrl,
+            },
+        };
+
+    const hasEnemy2 = levelIndex === 1;
 
     const map = useMemo(() => {
         const wall = {
@@ -181,8 +239,28 @@ export function Game({
         if (levelIndex === 0) return;
 
         startTransition(() => {
+            setEnemyHp(levelIndex === 2 ? KING_MAX_HP : ENEMY_MAX_HP);
+            setIsEnemyDead(false);
+            setIsEnemyHit(false);
+            setIsEnemyAttacking(false);
+            setEnemyAggro(false);
+
+            setIsPlayerAttacking(false);
+            setIsPlayerHit(false);
+            setIsPlayerDead(false);
+
             setDoorBState("closing");
             setDoorAState("idle");
+
+            if (levelIndex === 1) {
+                setEnemy2Hp(ENEMY_MAX_HP);
+                setIsEnemy2Dead(false);
+                setIsEnemy2Hit(false);
+                setIsEnemy2Attacking(false);
+                setEnemy2Aggro(false);
+            } else {
+                setIsEnemy2Dead(true);
+            }
         });
 
         const t = window.setTimeout(() => {
@@ -212,6 +290,15 @@ export function Game({
         facing: 1 as 1 | -1,
     });
 
+    const enemy2Phys = useRef({
+        x: startEnemy2X,
+        y: groundY,
+        vx: 0,
+        vy: 0,
+        grounded: true,
+        facing: 1 as 1 | -1,
+    });
+
     const combatRef = useRef({
         // player
         playerAtkT: 0,
@@ -224,6 +311,15 @@ export function Game({
         enemyIFramesT: 0,
         enemyAtkCooldownT: 0,
     });
+
+    const enemy2CombatRef = useRef({
+        atkT: 0,
+        didHitThisSwing: false,
+        iFramesT: 0,
+        atkCooldownT: 0,
+    });
+
+    const pendingRespawnRef = useRef<null | { level: 0 | 1 | 2 }>(null);
 
     const keysRef = useKeyboard();
 
@@ -251,11 +347,47 @@ export function Game({
         const ep = enemyPhys.current;
         const c = combatRef.current;
 
+        const hasEnemy2 = levelIndex === 1;
+        const isBossLevel = levelIndex === 2;
+
+        const enemy1Damage = isBossLevel ? KING_DAMAGE : DAMAGE_ENEMY;
+        const enemy1Speed = isBossLevel ? KING_SPEED : ENEMY_SPEED;
+
+        const ep2 = enemy2Phys.current;
+        const c2 = enemy2CombatRef.current;
+
+        const pending = pendingRespawnRef.current;
+        if (pending) {
+            pendingRespawnRef.current = null;
+
+            ep.x = startEnemyX;
+            ep.y = startEnemyY;
+            ep.vx = 0;
+            ep.vy = 0;
+            ep.grounded = true;
+            ep.facing = -1;
+
+            if (pending.level === 1) {
+                const ep2 = enemy2Phys.current;
+                ep2.x = startEnemy2X;
+                ep2.y = startEnemy2Y;
+                ep2.vx = 0;
+                ep2.vy = 0;
+                ep2.grounded = true;
+                ep2.facing = -1;
+            }
+        }
+
         const allowInput = phase === "play" && !isPlayerDead;
 
         c.playerIFramesT = Math.max(0, c.playerIFramesT - dt);
         c.enemyIFramesT = Math.max(0, c.enemyIFramesT - dt);
         c.enemyAtkCooldownT = Math.max(0, c.enemyAtkCooldownT - dt);
+
+        if (hasEnemy2) {
+            c2.iFramesT = Math.max(0, c2.iFramesT - dt);
+            c2.atkCooldownT = Math.max(0, c2.atkCooldownT - dt);
+        }
 
         if (isPlayerDead && isEnemyAttacking) setIsEnemyAttacking(false);
 
@@ -288,6 +420,11 @@ export function Game({
             ep.vy += GRAVITY * dt;
         } else {
             ep.vy = 0;
+        }
+
+        if (hasEnemy2) {
+            if (!ep2.grounded) ep2.vy += GRAVITY * dt;
+            else ep2.vy = 0;
         }
 
         // collision
@@ -336,6 +473,32 @@ export function Game({
         const eRenderX = Math.round(ep.x + PLAYER_W / 2 + RENDER_OFF_X);
         const eRenderY = Math.floor(ep.y + PLAYER_H + RENDER_OFF_Y);
 
+        let e2RenderX = 0;
+        let e2RenderY = 0;
+
+        if (hasEnemy2) {
+            const e2Rect = { x: ep2.x, y: ep2.y, w: PLAYER_W, h: PLAYER_H };
+            const e2Res = moveWithTileCollision({
+                map,
+                solid,
+                tileSize: TILE,
+                rect: e2Rect,
+                vx: ep2.vx,
+                vy: ep2.vy,
+                dt,
+            });
+
+            ep2.x = e2Res.rect.x;
+            ep2.y = e2Res.rect.y;
+            ep2.vx = e2Res.vx;
+            ep2.vy = e2Res.vy;
+            ep2.grounded = e2Res.grounded;
+
+            e2RenderX = Math.round(ep2.x + PLAYER_W / 2 + RENDER_OFF_X);
+            e2RenderY = Math.floor(ep2.y + PLAYER_H + RENDER_OFF_Y);
+        }
+
+
         const offX = mapOffsetRef.current.x;
         const offY = mapOffsetRef.current.y;
 
@@ -347,8 +510,17 @@ export function Game({
         setEnemyX(offX + eRenderX);
         setEnemyY(offY + eRenderY);
 
+        if (hasEnemy2) {
+            setEnemy2X(offX + e2RenderX);
+            setEnemy2Y(offY + e2RenderY);
+        }
+
         if (!isEnemyDead) {
             setFlipEnemyX(ep.facing === -1);
+        }
+
+        if (hasEnemy2 && !isEnemy2Dead) {
+            setFlipEnemy2X(ep2.facing === -1);
         }
 
         if (enemyAggro && !isEnemyDead && !isEnemyHit && !isPlayerDead) {
@@ -359,12 +531,32 @@ export function Game({
             ep.facing = dirE as 1 | -1;
 
             if (!isEnemyAttacking && absDx > ENEMY_STOP_DIST) {
-                ep.vx = dirE * ENEMY_SPEED;
+                ep.vx = dirE * enemy1Speed;
             } else {
                 ep.vx = 0;
             }
         } else {
             ep.vx = 0;
+        }
+
+        if (hasEnemy2) {
+            if ((offY + pRenderY) > 550 && !enemy2Aggro) setEnemy2Aggro(true);
+
+            if (enemy2Aggro && !isEnemy2Dead && !isEnemy2Hit && !isPlayerDead) {
+                const dx2 = p.x - ep2.x;
+                const absDx2 = Math.abs(dx2);
+                const dirE2 = dx2 < 0 ? -1 : 1;
+
+                ep2.facing = dirE2 as 1 | -1;
+
+                if (!isEnemy2Attacking && absDx2 > ENEMY_STOP_DIST) {
+                    ep2.vx = dirE2 * ENEMY_SPEED;
+                } else {
+                    ep2.vx = 0;
+                }
+            } else {
+                ep2.vx = 0;
+            }
         }
 
         const canEnemyAct = !isEnemyDead && !isPlayerDead;
@@ -383,6 +575,25 @@ export function Game({
             c.enemyAtkCooldownT = ENEMY_ATK_COOLDOWN;
         }
 
+        if (hasEnemy2) {
+            const canEnemy2Act = !isEnemy2Dead && !isPlayerDead;
+
+            if (
+                enemy2Aggro &&
+                canEnemy2Act &&
+                !isEnemy2Attacking &&
+                !isEnemy2Hit &&
+                c2.atkCooldownT <= 0 &&
+                inMeleeRange(ep2.x, ep2.y, p.x, p.y)
+            ) {
+                setIsEnemy2Attacking(true);
+                c2.atkT = 0;
+                c2.didHitThisSwing = false;
+                c2.atkCooldownT = ENEMY_ATK_COOLDOWN;
+            }
+        }
+
+
         if (isPlayerAttacking) {
             c.playerAtkT += dt;
         } else {
@@ -397,11 +608,22 @@ export function Game({
             c.enemyDidHitThisSwing = false;
         }
 
+        if (hasEnemy2) {
+            if (isEnemy2Attacking) c2.atkT += dt;
+            else {
+                c2.atkT = 0;
+                c2.didHitThisSwing = false;
+            }
+        }
+
         const playerAttackActive =
             isPlayerAttacking && c.playerAtkT >= ATTACK_WINDUP && c.playerAtkT <= (ATTACK_WINDUP + ATTACK_ACTIVE);
 
         const enemyAttackActive =
             isEnemyAttacking && c.enemyAtkT >= ATTACK_WINDUP && c.enemyAtkT <= (ATTACK_WINDUP + ATTACK_ACTIVE);
+
+        const enemy2AttackActive =
+            hasEnemy2 && isEnemy2Attacking && c2.atkT >= ATTACK_WINDUP && c2.atkT <= (ATTACK_WINDUP + ATTACK_ACTIVE);
 
         if (
             playerAttackActive &&
@@ -422,6 +644,25 @@ export function Game({
         }
 
         if (
+            hasEnemy2 &&
+            playerAttackActive &&
+            !c.playerDidHitThisSwing &&
+            !isEnemy2Dead &&
+            c2.iFramesT <= 0 &&
+            inMeleeRange(p.x, p.y, ep2.x, ep2.y)
+        ) {
+            c.playerDidHitThisSwing = true;
+            c2.iFramesT = IFRAME_TIME;
+
+            setEnemy2Hp((hp) => {
+                const next = Math.max(0, hp - DAMAGE_PLAYER);
+                if (next === 0) setIsEnemy2Dead(true);
+                else setIsEnemy2Hit(true);
+                return next;
+            });
+        }
+
+        if (
             enemyAttackActive &&
             !c.enemyDidHitThisSwing &&
             !isPlayerDead &&
@@ -429,6 +670,25 @@ export function Game({
             inMeleeRange(ep.x, ep.y, p.x, p.y)
         ) {
             c.enemyDidHitThisSwing = true;
+            c.playerIFramesT = IFRAME_TIME;
+
+            setPlayerHp((hp) => {
+                const next = Math.max(0, hp - enemy1Damage);
+                if (next === 0) setIsPlayerDead(true);
+                else setIsPlayerHit(true);
+                return next;
+            });
+        }
+
+        if (
+            hasEnemy2 &&
+            enemy2AttackActive &&
+            !c2.didHitThisSwing &&
+            !isPlayerDead &&
+            c.playerIFramesT <= 0 &&
+            inMeleeRange(ep2.x, ep2.y, p.x, p.y)
+        ) {
+            c2.didHitThisSwing = true;
             c.playerIFramesT = IFRAME_TIME;
 
             setPlayerHp((hp) => {
@@ -464,6 +724,19 @@ export function Game({
 
         setEnemyAnim((prev) => (prev === nextEnemyAnim ? prev : nextEnemyAnim));
 
+        if (hasEnemy2) {
+            const nextEnemy2AnimBase: "idle" | "run" | "jump" =
+                !ep2.grounded ? "jump" : ep2.vx !== 0 ? "run" : "idle";
+
+            const nextEnemy2Anim =
+                isEnemy2Dead ? "dead" :
+                    isEnemy2Hit ? "hit" :
+                        isEnemy2Attacking ? "attack" :
+                            nextEnemy2AnimBase;
+
+            setEnemy2Anim((prev) => (prev === nextEnemy2Anim ? prev : nextEnemy2Anim));
+        }
+
         // NEXT LEVEL
         const intersectsDoorCenter = (
             player: { x: number; y: number; w: number; h: number },
@@ -483,7 +756,9 @@ export function Game({
             return centerDistX <= maxCenterOffset && overlapY;
         };
 
-        if (phase === "play" && isEnemyDead && doorObj && !transitionedRef.current) {
+        const allEnemiesDead = hasEnemy2 ? (isEnemyDead && isEnemy2Dead) : isEnemyDead;
+
+        if (phase === "play" && allEnemiesDead && doorObj && !transitionedRef.current) {
             const doorBottomY = (doorObj.ty + 1) * TILE;
 
             const doorRect = {
@@ -535,11 +810,21 @@ export function Game({
                 doorStates={doorStates}
             />
 
+            {hasEnemy2 && (
+                <HPBar
+                    x={enemy2X}
+                    y={enemy2Y}
+                    hp={enemy2Hp}
+                    maxHp={ENEMY_MAX_HP}
+                    flipX={flipEnemy2X}
+                />
+            )}
+
             <HPBar
                 x={enemyX}
                 y={enemyY}
                 hp={enemyHp}
-                maxHp={ENEMY_MAX_HP}
+                maxHp={enemy1Profile.maxHp}
                 flipX={flipEnemyX}
             />
 
@@ -551,17 +836,39 @@ export function Game({
                 flipX={flipPlayerX}
             />
 
+            {hasEnemy2 && (
+                <Enemy
+                    x={enemy2X}
+                    y={enemy2Y}
+                    anim={enemy2Anim}
+                    flipX={flipEnemy2X}
+                    idleUrl={enemyIdleUrl}
+                    runUrl={enemyRunUrl}
+                    jumpUrl={enemyJumpUrl}
+                    attackUrl={enemyAttackUrl}
+                    hitUrl={enemyHitUrl}
+                    deadUrl={enemyDeadUrl}
+                    fps={10}
+                    onAnimComplete={(name) => {
+                        if (name === "attack") setIsEnemy2Attacking(false);
+                        if (name === "hit") setIsEnemy2Hit(false);
+                    }}
+                />
+            )}
+
             <Enemy
                 x={enemyX}
                 y={enemyY}
                 anim={enemyAnim}
                 flipX={flipEnemyX}
-                idleUrl={enemyIdleUrl}
-                runUrl={enemyRunUrl}
-                jumpUrl={enemyJumpUrl}
-                attackUrl={enemyAttackUrl}
-                hitUrl={enemyHitUrl}
-                deadUrl={enemyDeadUrl}
+                idleUrl={enemy1Profile.urls.idleUrl}
+                runUrl={enemy1Profile.urls.runUrl}
+                jumpUrl={enemy1Profile.urls.jumpUrl}
+                attackUrl={enemy1Profile.urls.attackUrl}
+                hitUrl={enemy1Profile.urls.hitUrl}
+                deadUrl={enemy1Profile.urls.deadUrl}
+                frameW={enemy1Profile.frameW}
+                frameH={enemy1Profile.frameH}
                 fps={10}
                 onAnimComplete={(name) => {
                     if (name === "attack") setIsEnemyAttacking(false);
@@ -588,7 +895,9 @@ export function Game({
                     if (name === "hit") setIsPlayerHit(false);
 
                     if (name === "doorIn") {
-                        setLevelIndex((prev) => ((prev + 1) as 0 | 1 | 2));
+                        const nextLevel = ((levelIndex + 1) as 0 | 1 | 2);
+                        pendingRespawnRef.current = { level: nextLevel };
+                        setLevelIndex(nextLevel);
 
                         const entry = OBJECTS.find(o => o.id === "doorB");
                         if (entry) {
@@ -608,15 +917,6 @@ export function Game({
 
                         setPhase("doorOut");
                         setPlayerAnim("doorOut");
-
-                        setIsPlayerAttacking(false);
-                        setIsPlayerHit(false);
-                        setIsPlayerDead(false);
-                        setIsEnemyAttacking(false);
-                        setIsEnemyHit(false);
-                        setIsEnemyDead(false);
-                        setEnemyAggro(false);
-                        setEnemyHp(ENEMY_MAX_HP);
                     }
 
                     if (name === "doorOut") {
