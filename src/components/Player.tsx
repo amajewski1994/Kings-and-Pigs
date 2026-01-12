@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Assets, Rectangle, Texture, AnimatedSprite } from "pixi.js";
 
-type AnimName = "idle" | "run" | "jump" | "attack" | "hit" | "dead";
+type AnimName = "idle" | "run" | "jump" | "attack" | "hit" | "dead" | "doorIn" | "doorOut";
 
 type PlayerProps = {
     x: number;
@@ -14,6 +14,8 @@ type PlayerProps = {
     attackUrl: string;
     hitUrl: string;
     deadUrl: string;
+    doorInUrl: string;
+    doorOutUrl: string;
 
     onAnimComplete?: (name: AnimName) => void;
 
@@ -43,6 +45,8 @@ export function Player({
     attackUrl,
     hitUrl,
     deadUrl,
+    doorInUrl,
+    doorOutUrl,
     frameW = 78,
     frameH = 58,
     fps = 10,
@@ -55,6 +59,8 @@ export function Player({
     const [attackFrames, setAttackFrames] = useState<Texture[] | null>(null);
     const [hitFrames, setHitFrames] = useState<Texture[] | null>(null);
     const [deadFrames, setDeadFrames] = useState<Texture[] | null>(null);
+    const [doorInFrames, setDoorInFrames] = useState<Texture[] | null>(null);
+    const [doorOutFrames, setDoorOutFrames] = useState<Texture[] | null>(null);
 
     const spriteRef = useRef<AnimatedSprite | null>(null);
 
@@ -63,13 +69,15 @@ export function Player({
 
         (async () => {
             try {
-                const [idleTex, runTex, jumpTex, attackTex, hitTex, deadTex] = await Promise.all([
+                const [idleTex, runTex, jumpTex, attackTex, hitTex, deadTex, doorInTex, doorOutTex] = await Promise.all([
                     Assets.load<Texture>(idleUrl),
                     Assets.load<Texture>(runUrl),
                     Assets.load<Texture>(jumpUrl),
                     Assets.load<Texture>(attackUrl),
                     Assets.load<Texture>(hitUrl),
                     Assets.load<Texture>(deadUrl),
+                    Assets.load<Texture>(doorInUrl),
+                    Assets.load<Texture>(doorOutUrl),
                 ]);
 
                 idleTex.source.scaleMode = "nearest";
@@ -78,6 +86,8 @@ export function Player({
                 attackTex.source.scaleMode = "nearest";
                 hitTex.source.scaleMode = "nearest";
                 deadTex.source.scaleMode = "nearest";
+                doorInTex.source.scaleMode = "nearest";
+                doorOutTex.source.scaleMode = "nearest";
 
                 const idle = sliceHorizontalSheet(idleTex, frameW, frameH);
                 const run = sliceHorizontalSheet(runTex, frameW, frameH);
@@ -85,6 +95,8 @@ export function Player({
                 const attack = sliceHorizontalSheet(attackTex, frameW, frameH);
                 const hit = sliceHorizontalSheet(hitTex, frameW, frameH);
                 const dead = sliceHorizontalSheet(deadTex, frameW, frameH);
+                const doorIn = sliceHorizontalSheet(doorInTex, frameW, frameH);
+                const doorOut = sliceHorizontalSheet(doorOutTex, frameW, frameH);
 
                 if (!alive) return;
 
@@ -94,6 +106,8 @@ export function Player({
                 setAttackFrames(attack);
                 setHitFrames(hit);
                 setDeadFrames(dead);
+                setDoorInFrames(doorIn);
+                setDoorOutFrames(doorOut);
             } catch (e) {
                 console.error("Failed to load player sprites:", e);
             }
@@ -102,7 +116,7 @@ export function Player({
         return () => {
             alive = false;
         };
-    }, [idleUrl, runUrl, jumpUrl, attackUrl, hitUrl, deadUrl, frameW, frameH]);
+    }, [idleUrl, runUrl, jumpUrl, attackUrl, hitUrl, deadUrl, doorInUrl, doorOutUrl, frameW, frameH]);
 
     const textures = useMemo(() => {
         switch (anim) {
@@ -112,8 +126,10 @@ export function Player({
             case "attack": return attackFrames;
             case "hit": return hitFrames;
             case "dead": return deadFrames;
+            case "doorIn": return doorInFrames;
+            case "doorOut": return doorOutFrames;
         }
-    }, [anim, idleFrames, runFrames, jumpFrames, attackFrames, hitFrames, deadFrames]);
+    }, [anim, idleFrames, runFrames, jumpFrames, attackFrames, hitFrames, deadFrames, doorInFrames, doorOutFrames]);
 
     const animationSpeed = fps / 60;
 
@@ -129,13 +145,15 @@ export function Player({
             s.textures = textures;
         }
 
-        const isOneShot = anim === "jump" || anim === "attack" || anim === "hit" || anim === "dead";
+        const isOneShot = anim === "jump" || anim === "attack" || anim === "hit" || anim === "dead" || anim === "doorIn" || anim === "doorOut";
         s.loop = !isOneShot;
         s.animationSpeed = animationSpeed;
 
         s.onComplete = undefined;
         if (anim === "attack") s.onComplete = () => onAnimComplete?.("attack");
         if (anim === "hit") s.onComplete = () => onAnimComplete?.("hit");
+        if (anim === "doorIn") s.onComplete = () => onAnimComplete?.("doorIn");
+        if (anim === "doorOut") s.onComplete = () => onAnimComplete?.("doorOut");
 
         if (animChanged) {
             s.gotoAndPlay(0);
@@ -144,8 +162,6 @@ export function Player({
             if (!s.playing) s.play();
         }
     }, [anim, textures, animationSpeed, onAnimComplete]);
-
-
 
     if (!textures) return null;
 

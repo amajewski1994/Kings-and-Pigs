@@ -102,7 +102,41 @@ export function makeMapFromMask(
     return map;
 }
 
-export function makeSampleShapeMap(
+export function makeSampleShapeMap0(
+    width: number,
+    height: number,
+    floor: number,
+    wall: WallTiles
+) {
+    const mask = makeMask(width, height, false);
+
+    fillRect(mask, 10, 3, 13, 9, true);
+
+    fillRect(mask, 2, 3, 9, 5, true);
+
+    fillRect(mask, 9, 6, 2, 2, true);
+
+    return makeMapFromMask(mask, floor, wall, -1);
+}
+
+export function makeSampleShapeMap1(
+    width: number,
+    height: number,
+    floor: number,
+    wall: WallTiles
+) {
+    const mask = makeMask(width, height, false);
+
+    fillRect(mask, 10, 3, 13, 9, true);
+
+    fillRect(mask, 2, 3, 9, 5, true);
+
+    fillRect(mask, 9, 6, 2, 2, true);
+
+    return makeMapFromMask(mask, floor, wall, -1);
+}
+
+export function makeSampleShapeMap2(
     width: number,
     height: number,
     floor: number,

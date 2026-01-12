@@ -2,12 +2,12 @@ import { PLAYER_CONFIG } from "./config/player";
 import { WORLD_CONFIG } from "./config/world";
 
 import { useTick } from "@pixi/react";
-import { useEffect, useMemo, useRef, useState, useLayoutEffect } from "react";
+import { useEffect, useMemo, useRef, useState, useLayoutEffect, startTransition } from "react";
 import { Texture } from "pixi.js";
 
 import { TileMap } from "./components/TileMap";
 // import { TilePalette } from "./components/TilePalette";
-import { makeSampleShapeMap } from "./game/shapeGen";
+import { makeSampleShapeMap0, makeSampleShapeMap1, makeSampleShapeMap2 } from "./game/shapeGen";
 import { Player } from "./components/Player";
 import { Enemy } from "./components/Enemy";
 import { useKeyboard } from "./components/useKeyboard";
@@ -23,6 +23,8 @@ const playerJumpUrl = "/assets/Sprites/01-King Human/Jump.png";
 const playerAttackUrl = "/assets/Sprites/01-King Human/Attack.png";
 const playerHitUrl = "/assets/Sprites/01-King Human/Hit.png";
 const playerDeadUrl = "/assets/Sprites/01-King Human/Dead.png";
+const playerDoorInUrl = "/assets/Sprites/01-King Human/DoorIn.png";
+const playerDoorOutUrl = "/assets/Sprites/01-King Human/DoorOut.png";
 
 const enemyIdleUrl = "/assets/Sprites/03-Pig/Idle.png";
 const enemyRunUrl = "/assets/Sprites/03-Pig/Run.png";
@@ -46,6 +48,8 @@ const ENEMY_ATK_COOLDOWN = 0.8;
 
 const ENEMY_SPEED = 90;
 const ENEMY_STOP_DIST = 45;
+
+const DOOR_VISUAL_BIAS_X = 6;
 
 type Props = {
     tileset: Texture;
@@ -74,34 +78,6 @@ export function Game({
         MAP_H
     } = WORLD_CONFIG;
 
-    const map = useMemo(
-        () =>
-            makeSampleShapeMap(MAP_W, MAP_H, 127, {
-                tl: 6,
-                t: 37,
-                tr: 7,
-                l: 20,
-                r: 18,
-                bl: 24,
-                b: 1,
-                br: 25,
-
-                innerTL: 0,
-                innerTR: 2,
-                innerBL: 36,
-                innerBR: 38,
-            }),
-        []
-    );
-
-    const solid = useMemo(() => makeSolidSet({
-        tl: 6, t: 37, tr: 7,
-        l: 20, r: 18,
-        bl: 24, b: 1, br: 25,
-        innerTL: 0, innerTR: 2, innerBL: 36, innerBR: 38,
-    }), []);
-
-
     const startPlayerX = 200;
     const startPlayerY = 200;
     const startEnemyX = 600;
@@ -112,7 +88,7 @@ export function Game({
     const [playerX, setPlayerX] = useState(startPlayerX);
     const [playerY, setPlayerY] = useState(startPlayerY);
     const [playerAnim, setPlayerAnim] = useState<
-        "idle" | "run" | "jump" | "attack" | "hit" | "dead"
+        "idle" | "run" | "jump" | "attack" | "hit" | "dead" | "doorIn" | "doorOut"
     >("idle");
     const [isPlayerAttacking, setIsPlayerAttacking] = useState(false);
     const [isPlayerHit, setIsPlayerHit] = useState(false);
@@ -137,6 +113,38 @@ export function Game({
     const [enemyHp, setEnemyHp] = useState(ENEMY_MAX_HP);
     const [enemyAggro, setEnemyAggro] = useState(false);
 
+    const [levelIndex, setLevelIndex] = useState<0 | 1 | 2>(0);
+    const [phase, setPhase] = useState<"play" | "doorIn" | "doorOut">("play");
+    const [doorAState, setDoorAState] = useState<"idle" | "opening" | "closing">("idle");
+    const [doorBState, setDoorBState] = useState<"idle" | "opening" | "closing">("idle");
+
+    const mapOffsetRef = useRef({ x: 0, y: 0 });
+    const transitionedRef = useRef(false);
+
+    const map = useMemo(() => {
+        const wall = {
+            tl: 6, t: 37, tr: 7,
+            l: 20, r: 18,
+            bl: 24, b: 1, br: 25,
+            innerTL: 0, innerTR: 2, innerBL: 36, innerBR: 38,
+        };
+
+        if (levelIndex === 0) return makeSampleShapeMap0(MAP_W, MAP_H, 127, wall);
+        if (levelIndex === 1) return makeSampleShapeMap1(MAP_W, MAP_H, 127, wall);
+        return makeSampleShapeMap2(MAP_W, MAP_H, 127, wall);
+    }, [levelIndex, MAP_W, MAP_H]);
+
+    const solid = useMemo(() => makeSolidSet({
+        tl: 6, t: 37, tr: 7,
+        l: 20, r: 18,
+        bl: 24, b: 1, br: 25,
+        innerTL: 0, innerTR: 2, innerBL: 36, innerBR: 38,
+    }), []);
+
+    const doorObj = useMemo(() => OBJECTS.find(o => o.kind === "door"), []);
+
+    const doorStates = useMemo(() => ({ doorA: doorAState, doorB: doorBState }), [doorAState, doorBState]);
+
     useEffect(() => {
         const onMouseDown = (e: MouseEvent) => {
             if (e.button !== 0) return;
@@ -160,6 +168,30 @@ export function Game({
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
     }, []);
+
+    useEffect(() => { transitionedRef.current = false; }, [levelIndex]);
+
+    useEffect(() => {
+        startTransition(() => {
+            setDoorAState(isEnemyDead ? "opening" : "idle");
+        });
+    }, [isEnemyDead]);
+
+    useEffect(() => {
+        if (levelIndex === 0) return;
+
+        startTransition(() => {
+            setDoorBState("closing");
+            setDoorAState("idle");
+        });
+
+        const t = window.setTimeout(() => {
+            startTransition(() => setDoorBState("idle"));
+        }, 600);
+
+        return () => window.clearTimeout(t);
+    }, [levelIndex]);
+
 
     const playerPhys = useRef({
         x: startPlayerX,
@@ -193,8 +225,6 @@ export function Game({
         enemyAtkCooldownT: 0,
     });
 
-    const mapOffsetRef = useRef({ x: 0, y: 0 });
-
     const keysRef = useKeyboard();
 
     const mapPxW = MAP_W * TILE;
@@ -221,7 +251,7 @@ export function Game({
         const ep = enemyPhys.current;
         const c = combatRef.current;
 
-        const allowInput = !isPlayerDead;
+        const allowInput = phase === "play" && !isPlayerDead;
 
         c.playerIFramesT = Math.max(0, c.playerIFramesT - dt);
         c.enemyIFramesT = Math.max(0, c.enemyIFramesT - dt);
@@ -413,10 +443,12 @@ export function Game({
             !p.grounded ? "jump" : dir !== 0 ? "run" : "idle";
 
         const nextPlayerAnim =
-            isPlayerDead ? "dead" :
-                isPlayerHit ? "hit" :
-                    isPlayerAttacking ? "attack" :
-                        nextPlayerAnimBase;
+            phase === "doorIn" ? "doorIn" :
+                phase === "doorOut" ? "doorOut" :
+                    isPlayerDead ? "dead" :
+                        isPlayerHit ? "hit" :
+                            isPlayerAttacking ? "attack" :
+                                nextPlayerAnimBase;
 
         setPlayerAnim((prev) => (prev === nextPlayerAnim ? prev : nextPlayerAnim));
 
@@ -431,6 +463,52 @@ export function Game({
                         nextEnemyAnimBase;
 
         setEnemyAnim((prev) => (prev === nextEnemyAnim ? prev : nextEnemyAnim));
+
+        // NEXT LEVEL
+        const intersectsDoorCenter = (
+            player: { x: number; y: number; w: number; h: number },
+            door: { x: number; y: number; w: number; h: number }
+        ) => {
+            const playerCenterX = player.x + player.w / 2;
+            const doorCenterX = door.x + door.w / 2;
+
+            const centerDistX = Math.abs(playerCenterX - doorCenterX);
+
+            const maxCenterOffset = TILE * 0.25;
+
+            const overlapY =
+                player.y < door.y + door.h &&
+                player.y + player.h > door.y;
+
+            return centerDistX <= maxCenterOffset && overlapY;
+        };
+
+        if (phase === "play" && isEnemyDead && doorObj && !transitionedRef.current) {
+            const doorBottomY = (doorObj.ty + 1) * TILE;
+
+            const doorRect = {
+                x: doorObj.tx * TILE,
+                y: doorBottomY - 2 * TILE,
+                w: TILE,
+                h: 2 * TILE,
+            };
+
+            if (intersectsDoorCenter(pRect, doorRect)) {
+                transitionedRef.current = true;
+
+                const p = playerPhys.current;
+                const doorCenterX = doorObj.tx * TILE + TILE / 2;
+                const bias = (p.facing === -1 ? -DOOR_VISUAL_BIAS_X : DOOR_VISUAL_BIAS_X);
+                p.x = doorCenterX - PLAYER_W / 2 - RENDER_OFF_X + bias;
+                p.y = doorBottomY - PLAYER_H;
+                p.vx = 0;
+                p.vy = 0;
+                p.grounded = true;
+
+                setPhase("doorIn");
+                setPlayerAnim("doorIn");
+            }
+        }
     });
 
     return (
@@ -453,6 +531,8 @@ export function Game({
                 tileSize={TILE}
                 worldX={mapOffsetX}
                 worldY={mapOffsetY}
+                levelIndex={levelIndex}
+                doorStates={doorStates}
             />
 
             <HPBar
@@ -500,10 +580,48 @@ export function Game({
                 attackUrl={playerAttackUrl}
                 hitUrl={playerHitUrl}
                 deadUrl={playerDeadUrl}
+                doorInUrl={playerDoorInUrl}
+                doorOutUrl={playerDoorOutUrl}
                 fps={10}
                 onAnimComplete={(name) => {
                     if (name === "attack") setIsPlayerAttacking(false);
                     if (name === "hit") setIsPlayerHit(false);
+
+                    if (name === "doorIn") {
+                        setLevelIndex((prev) => ((prev + 1) as 0 | 1 | 2));
+
+                        const entry = OBJECTS.find(o => o.id === "doorB");
+                        if (entry) {
+                            const p = playerPhys.current;
+                            p.facing = 1;
+
+                            const doorCenterX = entry.tx * TILE + TILE / 2;
+                            const doorBottomY = (entry.ty + 1) * TILE;
+
+                            p.x = doorCenterX - PLAYER_W / 2 - RENDER_OFF_X + DOOR_VISUAL_BIAS_X;
+                            p.y = doorBottomY - PLAYER_H;
+
+                            p.vx = 0;
+                            p.vy = 0;
+                            p.grounded = true;
+                        }
+
+                        setPhase("doorOut");
+                        setPlayerAnim("doorOut");
+
+                        setIsPlayerAttacking(false);
+                        setIsPlayerHit(false);
+                        setIsPlayerDead(false);
+                        setIsEnemyAttacking(false);
+                        setIsEnemyHit(false);
+                        setIsEnemyDead(false);
+                        setEnemyAggro(false);
+                        setEnemyHp(ENEMY_MAX_HP);
+                    }
+
+                    if (name === "doorOut") {
+                        setPhase("play");
+                    }
                 }}
             />
 

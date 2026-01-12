@@ -16,9 +16,13 @@ type Props = {
 
     worldX: number;
     worldY: number;
+
+    doorState?: "idle" | "opening" | "closing";
+    levelIndex: 0 | 1 | 2;
+    doorStates: Partial<Record<string, "idle" | "opening" | "closing">>;
 };
 
-export function MapObjects({ objects, decorTex, tileSize, worldX, worldY }: Props) {
+export function MapObjects({ objects, decorTex, tileSize, worldX, worldY, doorStates, levelIndex = 0 }: Props) {
     const decorFrames = useMemo(() => {
         const { frames } = sliceGrid(decorTex, 32, 32, 0, 0, 0, 0);
         return frames;
@@ -58,6 +62,8 @@ export function MapObjects({ objects, decorTex, tileSize, worldX, worldY }: Prop
                     );
                 }
 
+                if (o.id === "doorB" && levelIndex === 0) return null;
+
                 if (o.kind === "door") {
                     const x = worldX + o.tx * tileSize + tileSize / 2;
                     const y = worldY + (o.ty + 1) * tileSize;
@@ -71,7 +77,7 @@ export function MapObjects({ objects, decorTex, tileSize, worldX, worldY }: Prop
                             openingUrl={doorOpeningUrl}
                             closingUrl={doorClosingUrl}
                             fps={10}
-                            state={"idle"}
+                            state={doorStates[o.id] ?? "idle"}
                             autoCycle={false}
                         />
                     );
