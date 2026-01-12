@@ -309,6 +309,8 @@ export function Game({
         const offX = mapOffsetRef.current.x;
         const offY = mapOffsetRef.current.y;
 
+        if ((offY + pRenderY) > 550 && !enemyAggro) setEnemyAggro(true);
+
         setPlayerX(offX + pRenderX);
         setPlayerY(offY + pRenderY);
 
