@@ -1,15 +1,4 @@
-export type ObjectKind = "decor" | "door";
-
-export type MapObject = {
-    id: string;
-    kind: "decor" | "door";
-    tx: number;
-    ty: number;
-
-    prefabId?: string;
-    z?: number;
-};
-
+import type { MapObject } from './types'
 
 export const OBJECTS: MapObject[] = [
     { id: "winA", kind: "decor", tx: 6, ty: 4.5, prefabId: "windowA", z: 0 },

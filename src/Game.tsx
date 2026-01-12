@@ -3,7 +3,6 @@ import { WORLD_CONFIG } from "./config/world";
 
 import { useTick } from "@pixi/react";
 import { useEffect, useMemo, useRef, useState, useLayoutEffect, startTransition } from "react";
-import { Texture } from "pixi.js";
 
 import { TileMap } from "./components/TileMap";
 // import { TilePalette } from "./components/TilePalette";
@@ -16,6 +15,8 @@ import { makeSolidSet, moveWithTileCollision } from "./game/collision";
 import { MapObjects } from "./components/MapObjects";
 import { OBJECTS } from "./game/objects";
 import { HPBar } from "./components/HPBar";
+
+import type { GameProps } from './game/types';
 
 const playerIdleUrl = "/assets/Sprites/01-King Human/Idle.png";
 const playerRunUrl = "/assets/Sprites/01-King Human/Run.png";
@@ -62,19 +63,12 @@ const ENEMY_STOP_DIST = 45;
 
 const DOOR_VISUAL_BIAS_X = 6;
 
-type Props = {
-    tileset: Texture;
-    decorTex: Texture;
-    screenW: number;
-    screenH: number;
-};
-
 export function Game({
     tileset,
     decorTex,
     screenW,
     screenH
-}: Props) {
+}: GameProps) {
     const {
         SPEED,
         GRAVITY,

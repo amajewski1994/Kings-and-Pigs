@@ -1,29 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Assets, Rectangle, Texture, AnimatedSprite } from "pixi.js";
 
-type AnimName = "idle" | "run" | "jump" | "attack" | "hit" | "dead" | "doorIn" | "doorOut";
-
-type PlayerProps = {
-    x: number;
-    y: number;
-    anim: AnimName;
-
-    idleUrl: string;
-    runUrl: string;
-    jumpUrl: string;
-    attackUrl: string;
-    hitUrl: string;
-    deadUrl: string;
-    doorInUrl: string;
-    doorOutUrl: string;
-
-    onAnimComplete?: (name: AnimName) => void;
-
-    frameW?: number; // 78
-    frameH?: number; // 58
-    fps?: number;    // 10–12
-    flipX?: boolean;
-};
+import type { PlayerProps, AnimName } from "../game/types";
 
 function sliceHorizontalSheet(tex: Texture, frameW: number, frameH: number) {
     const frames = Math.floor(tex.source.width / frameW);

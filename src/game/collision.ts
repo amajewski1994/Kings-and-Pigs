@@ -1,4 +1,4 @@
-import type { WallTiles } from "./shapeGen";
+import type { WallTiles, Rect } from "./types";
 
 export function makeSolidSet(wall: WallTiles) {
     return new Set<number>([
@@ -8,8 +8,6 @@ export function makeSolidSet(wall: WallTiles) {
         wall.innerTL, wall.innerTR, wall.innerBL, wall.innerBR,
     ]);
 }
-
-export type Rect = { x: number; y: number; w: number; h: number };
 
 function isSolidAt(
     map: number[][],

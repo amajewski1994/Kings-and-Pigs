@@ -1,20 +1,4 @@
-export type WallTiles = {
-    tl: number;
-    t: number;
-    tr: number;
-    l: number;
-    r: number;
-    bl: number;
-    b: number;
-    br: number;
-
-    innerTL: number;
-    innerTR: number;
-    innerBL: number;
-    innerBR: number;
-};
-
-type Mask = boolean[][];
+import type { WallTiles, Mask } from './types'
 
 function makeMask(w: number, h: number, initial = false): Mask {
     return Array.from({ length: h }, () => Array.from({ length: w }, () => initial));

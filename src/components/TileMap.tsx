@@ -1,20 +1,7 @@
 import { useMemo } from "react";
 import { Texture, Rectangle } from "pixi.js";
 
-type TileMapProps = {
-    tileset: Texture;
-    map: number[][];
-    tileSize?: number;
-
-    offsetX?: number;
-    offsetY?: number;
-
-    gapX?: number;
-    gapY?: number;
-
-    worldX?: number;
-    worldY?: number;
-};
+import type { TileMapProps } from "../game/types";
 
 export function TileMap({
     tileset,
@@ -56,7 +43,7 @@ export function TileMap({
         <pixiContainer>
             {map.map((row, y) =>
                 row.map((tileIndex, x) => {
-                    if (tileIndex < 0) return null; // <-- puste pole = nie rysujemy
+                    if (tileIndex < 0) return null;
                     return (
                         <pixiSprite
                             key={`${x}-${y}`}

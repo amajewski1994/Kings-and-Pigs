@@ -1,20 +1,7 @@
 import { useMemo, useState } from "react";
 import { Rectangle, Texture } from "pixi.js";
 
-type TilePaletteProps = {
-    tileset: Texture;
-    tileSize?: number;
-
-    offsetX?: number;
-    offsetY?: number;
-
-    gapX?: number;
-    gapY?: number;
-
-    padding?: number;
-    columns?: number;
-    onPick?: (index: number) => void;
-};
+import type { TilePaletteProps } from "../game/types";
 
 function makeTileTexture(
     tileset: Texture,

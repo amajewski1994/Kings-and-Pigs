@@ -1,6 +1,5 @@
 import { useMemo } from "react";
-import { Texture } from "pixi.js";
-import type { MapObject } from "../game/objects";
+import type { MapObjectsProps } from "../game/types";
 import { sliceGrid } from "../game/spritesheet";
 import { DECOR_PREFABS } from "../game/decorPrefabs";
 import { Door } from "./Door";
@@ -9,20 +8,7 @@ const doorIdleUrl = "/assets/Sprites/11-Door/Idle.png";
 const doorOpeningUrl = "/assets/Sprites/11-Door/Opening.png";
 const doorClosingUrl = "/assets/Sprites/11-Door/Closing.png";
 
-type Props = {
-    objects: MapObject[];
-    decorTex: Texture;
-    tileSize: number;
-
-    worldX: number;
-    worldY: number;
-
-    doorState?: "idle" | "opening" | "closing";
-    levelIndex: 0 | 1 | 2;
-    doorStates: Partial<Record<string, "idle" | "opening" | "closing">>;
-};
-
-export function MapObjects({ objects, decorTex, tileSize, worldX, worldY, doorStates, levelIndex = 0 }: Props) {
+export function MapObjects({ objects, decorTex, tileSize, worldX, worldY, doorStates, levelIndex = 0 }: MapObjectsProps) {
     const decorFrames = useMemo(() => {
         const { frames } = sliceGrid(decorTex, 32, 32, 0, 0, 0, 0);
         return frames;

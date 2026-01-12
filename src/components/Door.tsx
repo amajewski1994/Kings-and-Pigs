@@ -1,23 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatedSprite, Assets, Rectangle, Texture } from "pixi.js";
 
-type DoorState = "idle" | "opening" | "closing";
-
-type Props = {
-    x: number;
-    y: number;
-
-    idleUrl: string;
-    openingUrl: string;
-    closingUrl: string;
-
-    frameW?: number; // 46
-    frameH?: number; // 56
-    fps?: number;    // 10–12
-
-    state?: DoorState;
-    autoCycle?: boolean;
-};
+import type { DoorState, DoorProps } from "../game/types";
 
 const defer = (fn: () => void) => {
     if (typeof queueMicrotask === "function") queueMicrotask(fn);
@@ -45,7 +29,7 @@ export function Door({
     fps = 10,
     state = "idle",
     autoCycle = false,
-}: Props) {
+}: DoorProps) {
     const [idleFrames, setIdleFrames] = useState<Texture[] | null>(null);
     const [openFrames, setOpenFrames] = useState<Texture[] | null>(null);
     const [closeFrames, setCloseFrames] = useState<Texture[] | null>(null);

@@ -1,8 +1,4 @@
-export type DecorPrefab = {
-    id: string;
-    tiles: number[][];
-    origin?: "tl" | "bl";
-};
+import type { DecorPrefab } from "./types";
 
 export const DECOR_PREFABS: Record<string, DecorPrefab> = {
     windowA: {

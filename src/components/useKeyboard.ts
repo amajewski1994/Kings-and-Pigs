@@ -1,13 +1,9 @@
 import { useEffect, useRef } from "react";
 
-type Keys = {
-    left: boolean;
-    right: boolean;
-    jump: boolean;
-};
+import type { KeysProps } from "../game/types";
 
 export function useKeyboard() {
-    const keysRef = useRef<Keys>({ left: false, right: false, jump: false });
+    const keysRef = useRef<KeysProps>({ left: false, right: false, jump: false });
 
     useEffect(() => {
         const onDown = (e: KeyboardEvent) => {
