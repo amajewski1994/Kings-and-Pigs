@@ -167,3 +167,38 @@ export type KeysProps = {
     right: boolean;
     jump: boolean;
 };
+
+export type Phase = "play" | "doorIn" | "doorOut"
+
+export type Phys = {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    grounded: boolean;
+    jumpLock?: boolean;
+    facing: 1 | -1;
+}
+
+export type CombatState = {
+    atkT: number;
+    didHitThisSwing: boolean;
+    iFramesT: number;
+    atkCooldownT: number;
+};
+
+export type EntityId = "player" | "enemy1" | "enemy2";
+
+export type EntityUI = {
+    x: number;
+    y: number;
+    hp: number;
+    flipX: boolean;
+    anim: AnimName;
+    flags: {
+        attacking: boolean;
+        hit: boolean;
+        dead: boolean;
+        aggro?: boolean;
+    };
+};

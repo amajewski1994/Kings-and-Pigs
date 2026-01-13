@@ -1,0 +1,12 @@
+export const POSITIONS = {
+    START_PLAYER_X: 200,
+    START_PLAYER_Y: 190,
+
+    START_ENEMY_X: 600,
+    START_ENEMY_Y: 200,
+
+    START_ENEMY2_X: 500,
+    START_ENEMY2_Y: 200,
+
+    // GROUND_Y: 190,
+} as const;
