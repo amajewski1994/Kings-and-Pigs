@@ -7,6 +7,7 @@ import { COMBAT_CONFIG } from './config/combat'
 import { POSITIONS } from './config/positions'
 import { PLAYER_CONFIG } from "./config/player";
 import { WORLD_CONFIG } from "./config/world";
+import { LEVEL_CONDITIONS } from "./config/levelConditions";
 
 import type { GameProps, Phase, DoorState, EntityId, EntityUI, Phys } from './game/types';
 
@@ -70,6 +71,12 @@ export function Game({
         START_ENEMY2_Y,
     } = POSITIONS
 
+    const {
+        MAX_LVL,
+        KING_LVL,
+        TWO_ENEMY_LVL,
+    } = LEVEL_CONDITIONS
+
     const { DOOR_VISUAL_BIAS_X } = VISUAL_CONFIG;
 
     const [entities, setEntities] = useState<Record<EntityId, EntityUI>>({
@@ -88,7 +95,8 @@ export function Game({
     const mapOffsetRef = useRef({ x: 0, y: 0 });
     const transitionedRef = useRef(false);
 
-    const isBossLevel = levelIndex === 2;
+    const isBossLevel = levelIndex === KING_LVL;
+
     const enemy1Profile = {
         maxHp: isBossLevel ? KING_MAX_HP : ENEMY_MAX_HP,
         damage: isBossLevel ? KING_DAMAGE : DAMAGE_ENEMY,
@@ -105,7 +113,7 @@ export function Game({
         },
     };
 
-    const hasEnemy2 = levelIndex === 1;
+    const hasEnemy2 = levelIndex === TWO_ENEMY_LVL;
 
     const playerPhys = useRef(makePhys(START_PLAYER_X, START_PLAYER_Y));
     const enemyPhys = useRef(makePhys(START_ENEMY_X, START_ENEMY_Y));
@@ -174,9 +182,9 @@ export function Game({
 
     useEffect(() => {
         startTransition(() => {
-            setDoorAState(entities.enemy1.flags.dead ? "opening" : "idle");
+            setDoorAState(entities.enemy1.flags.dead && levelIndex < MAX_LVL ? "opening" : "idle");
         });
-    }, [entities.enemy1.flags.dead]);
+    }, [entities.enemy1.flags.dead, levelIndex, MAX_LVL]);
 
     useEffect(() => {
         if (levelIndex === 0) return;
@@ -184,13 +192,13 @@ export function Game({
         startTransition(() => {
             patchFlags('player', { dead: false, hit: false, attacking: false });
 
-            patchEntity('enemy1', { hp: levelIndex === 2 ? KING_MAX_HP : ENEMY_MAX_HP })
+            patchEntity('enemy1', { hp: enemy1Profile.maxHp })
             patchFlags('enemy1', { dead: false, hit: false, attacking: false, aggro: false });
 
             setDoorBState("closing");
             setDoorAState("idle");
 
-            if (levelIndex === 1) {
+            if (levelIndex === TWO_ENEMY_LVL) {
                 patchEntity('enemy2', { hp: ENEMY_MAX_HP })
                 patchFlags('enemy2', { dead: false, hit: false, attacking: false, aggro: false });
             } else {
@@ -261,7 +269,7 @@ export function Game({
         const ec = enemyCombat.current;
         const ec2 = enemy2Combat.current;
 
-        const hasEnemy2 = levelIndex === 1;
+        const hasEnemy2 = levelIndex === TWO_ENEMY_LVL;
         const allowInput = phase === "play" && !player.flags.dead;
 
         const pending = pendingRespawnRef.current;
@@ -439,7 +447,7 @@ export function Game({
         // NEXT LEVEL
         const allEnemiesDead = hasEnemy2 ? (enemy1.flags.dead && enemy2.flags.dead) : enemy1.flags.dead;
 
-        if (phase === "play" && allEnemiesDead && doorObj && !transitionedRef.current) {
+        if (phase === "play" && allEnemiesDead && doorObj && !transitionedRef.current && levelIndex < MAX_LVL) {
             const doorBottomY = (doorObj.ty + 1) * TILE;
 
             const doorRect = {
