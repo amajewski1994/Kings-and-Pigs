@@ -1,7 +1,10 @@
 import { useTick } from "@pixi/react";
 import { useEffect, useMemo, useRef, useState, useLayoutEffect, startTransition } from "react";
+import { sound } from '@pixi/sound';
 
 import { PLAYER_SPRITES, ENEMY_SPRITES } from './assets/sprites'
+import { SOUNDS } from './assets/sounds'
+
 import { VISUAL_CONFIG } from './config/visuals'
 import { COMBAT_CONFIG } from './config/combat'
 import { POSITIONS } from './config/positions'
@@ -123,6 +126,10 @@ export function Game({
     const enemyCombat = useRef(makeCombat());
     const enemy2Combat = useRef(makeCombat());
 
+    const audioUnlockedRef = useRef(false); // for mobile
+    const prevAttackingRef = useRef(false);
+    const prevNextLevelRef = useRef(false);
+
     const pendingRespawnRef = useRef<null | { level: 0 | 1 | 2 }>(null);
 
     const keysRef = useKeyboard();
@@ -169,7 +176,51 @@ export function Game({
     };
 
     useEffect(() => {
+        const prev = prevAttackingRef.current;
+        const next = player.flags.attacking;
+
+        if (!prev && next) {
+            sound.play('playerMiss');
+        }
+
+        prevAttackingRef.current = next;
+    }, [player.flags.attacking]);
+
+    useEffect(() => {
+        const prev = prevNextLevelRef.current;
+        const next = phase === 'doorIn';
+
+        if (!prev && next) {
+            sound.play('nextLevel');
+        }
+
+        prevNextLevelRef.current = next;
+    }, [phase]);
+
+    useEffect(() => {
+        sound.add('playerMiss', SOUNDS.playerMiss);
+        sound.add('playerDead', SOUNDS.playerDead);
+        sound.add('playerHit0', SOUNDS.playerHit0);
+        sound.add('playerHit1', SOUNDS.playerHit1);
+        sound.add('pigDead', SOUNDS.pigDead);
+        sound.add('pigHit', SOUNDS.pigHit);
+        sound.add('kingPigDead', SOUNDS.kingPigDead);
+        sound.add('victory', SOUNDS.victory);
+        sound.add('lost', SOUNDS.lost);
+        sound.add('background', SOUNDS.background);
+        sound.add('nextLevel', SOUNDS.nextLevel);
+
+        sound.volumeAll = 0.1
+        sound.volume('background', 0.5)
+
+        sound.play('background')
+
         const onMouseDown = (e: MouseEvent) => {
+            if (!audioUnlockedRef.current) {
+                audioUnlockedRef.current = true;
+                sound.play('playerMiss', { volume: 0 }); // unlock
+            }
+
             if (e.button !== 0) return;
             patchFlags('player', { attacking: true })
         };
@@ -231,9 +282,30 @@ export function Game({
         attacking && atkT >= ATTACK_WINDUP && atkT <= (ATTACK_WINDUP + ATTACK_ACTIVE);
 
     const applyDamage = (targetId: EntityId, currentHp: number, dmg: number) => {
+
+        const deadSoundIdx = targetId === 'player' ? 'player' : levelIndex === MAX_LVL ? 'kingPig' : 'pig'
+        const hitSoundIdx = targetId === 'player' ? 'player' : 'pig'
+
+        const soundDead = `${deadSoundIdx}Dead`
+        const soundHit = hitSoundIdx !== 'player' ? `${hitSoundIdx}Hit` : levelIndex === MAX_LVL ? `${hitSoundIdx}Hit1` : `${hitSoundIdx}Hit0`
+
         const nextHp = Math.max(0, currentHp - dmg);
         patchEntity(targetId, { hp: nextHp });
         patchFlags(targetId, { dead: nextHp === 0, hit: nextHp > 0 });
+
+        sound.stop('playerMiss');
+        if (nextHp <= 0) {
+            sound.play(soundDead, () => {
+                if (targetId === 'player') {
+                    sound.stop('background')
+                    sound.play('lost')
+                } else if (levelIndex === MAX_LVL) {
+                    sound.stop('background')
+                    sound.play('victory')
+                }
+            })
+        }
+        else sound.play(soundHit)
         return nextHp;
     };
 
