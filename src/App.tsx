@@ -2,9 +2,9 @@ import { Application } from "@pixi/react";
 import { Assets, Texture } from "pixi.js";
 import { useEffect, useState } from "react";
 import { Game } from "./Game";
+import { TILES_SPRITES } from "./assets/sprites";
 
-const tilesetUrl = "/assets/Sprites/14-TileSets/Terrain.png";
-const decorUrl = "/assets/Sprites/14-TileSets/Decorations.png";
+const { tilesetUrl, decorUrl } = TILES_SPRITES;
 
 export default function App() {
   const [tileset, setTileset] = useState<Texture | null>(null);

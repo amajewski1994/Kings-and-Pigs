@@ -3,10 +3,9 @@ import type { MapObjectsProps } from "../game/types";
 import { sliceGrid } from "../game/spritesheet";
 import { DECOR_PREFABS } from "../game/decorPrefabs";
 import { Door } from "./Door";
+import { DOOR_SPRITES } from '../assets/sprites'
 
-const doorIdleUrl = "/assets/Sprites/11-Door/Idle.png";
-const doorOpeningUrl = "/assets/Sprites/11-Door/Opening.png";
-const doorClosingUrl = "/assets/Sprites/11-Door/Closing.png";
+const { doorIdleUrl, doorOpeningUrl, doorClosingUrl } = DOOR_SPRITES;
 
 export function MapObjects({ objects, decorTex, tileSize, worldX, worldY, doorStates, levelIndex = 0 }: MapObjectsProps) {
     const decorFrames = useMemo(() => {
