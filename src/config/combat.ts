@@ -1,8 +1,8 @@
 export const COMBAT_CONFIG = {
-    PLAYER_MAX_HP: 100,
+    PLAYER_MAX_HP: 160,
     ENEMY_MAX_HP: 60,
 
-    DAMAGE_PLAYER: 60,
+    DAMAGE_PLAYER: 20,
     DAMAGE_ENEMY: 12,
 
     KING_MAX_HP: 160,
