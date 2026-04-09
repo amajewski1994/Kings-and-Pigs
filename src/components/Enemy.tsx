@@ -39,6 +39,11 @@ export function Enemy({
     const spriteRef = useRef<AnimatedSprite | null>(null);
 
     useEffect(() => {
+        console.log("[Enemy] mounted");
+        return () => console.log("[Enemy] unmounted");
+    }, []);
+
+    useEffect(() => {
         let alive = true;
 
         (async () => {

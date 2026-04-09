@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Rectangle, Texture } from "pixi.js";
 
 import type { TilePaletteProps } from "../game/types";
@@ -37,6 +37,11 @@ export function TilePalette({
     onPick,
 }: TilePaletteProps) {
     const [selected, setSelected] = useState<number | null>(null);
+
+    useEffect(() => {
+        console.log("[TilePalette] mounted");
+        return () => console.log("[TilePalette] unmounted");
+    }, []);
 
     const { sheetCols, sheetRows, tileCount } = useMemo(() => {
         const usableW = tileset.source.width - offsetX;

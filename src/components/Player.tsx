@@ -43,6 +43,11 @@ export function Player({
     const spriteRef = useRef<AnimatedSprite | null>(null);
 
     useEffect(() => {
+        console.log("[Player] mounted");
+        return () => console.log("[Player] unmounted");
+    }, []);
+
+    useEffect(() => {
         let alive = true;
 
         (async () => {

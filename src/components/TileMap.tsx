@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Texture, Rectangle } from "pixi.js";
 
 import type { TileMapProps } from "../game/types";
@@ -23,6 +23,11 @@ export function TileMap({
 
         return { sheetCols, tileCount: sheetCols * sheetRows };
     }, [tileset, tileSize, offsetX, offsetY, gapX, gapY]);
+
+    useEffect(() => {
+        console.log("[TileMap] mounted");
+        return () => console.log("[TileMap] unmounted");
+    }, []);
 
     const tileTextures = useMemo(() => {
         return Array.from({ length: tileCount }, (_, index) => {

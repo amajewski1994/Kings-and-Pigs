@@ -88,6 +88,11 @@ export function Game({
         enemy2: { x: START_ENEMY2_X, y: START_ENEMY2_Y, hp: ENEMY_MAX_HP, flipX: false, anim: "idle", flags: { attacking: false, hit: false, dead: true, aggro: false } },
     });
 
+    useEffect(() => {
+        console.log("[Game] mounted");
+        return () => console.log("[Game] unmounted");
+    }, []);
+
     const { player, enemy1, enemy2 } = entities
 
     const [levelIndex, setLevelIndex] = useState<0 | 1 | 2>(0);

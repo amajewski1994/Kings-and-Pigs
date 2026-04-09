@@ -1,6 +1,7 @@
 import { type Graphics as PixiGraphics } from "pixi.js";
 
 import type { HPBarProps } from '../game/types'
+import { useEffect } from "react";
 
 export function HPBar({
     x,
@@ -17,6 +18,11 @@ export function HPBar({
     const fillW = Math.round(width * ratio);
 
     const signedOffsetX = flipX ? offsetX : -offsetX;
+
+    useEffect(() => {
+        console.log("[HPBar] mounted");
+        return () => console.log("[HPBar] unmounted");
+    }, []);
 
     return (
         <pixiGraphics
