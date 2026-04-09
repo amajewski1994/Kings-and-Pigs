@@ -20,6 +20,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    console.log("[App] render", {
+      gameReady,
+      hasTileset: !!tileset,
+      hasDecorTex: !!decorTex,
+    })
+
     let alive = true;
 
     (async () => {
@@ -75,6 +81,47 @@ export default function App() {
       cancelAnimationFrame(raf2);
     };
   }, [tileset, decorTex]);
+
+  useEffect(() => {
+    console.log("[App] gameReady changed:", gameReady);
+  }, [gameReady]);
+
+  useEffect(() => {
+    console.log("[App] tileset changed:", !!tileset);
+  }, [tileset]);
+
+  useEffect(() => {
+    console.log("[App] decorTex changed:", !!decorTex);
+  }, [decorTex]);
+
+  useEffect(() => {
+    return () => {
+      console.log("[App] unmounted");
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log("[Application wrapper] mounted");
+    return () => console.log("[Application wrapper] unmounted");
+  }, []);
+
+  useEffect(() => {
+    const onError = (event: ErrorEvent) => {
+      console.error("[window.onerror]", event.message, event.error);
+    };
+
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error("[unhandledrejection]", event.reason);
+    };
+
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onUnhandledRejection);
+
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onUnhandledRejection);
+    };
+  }, []);
 
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
