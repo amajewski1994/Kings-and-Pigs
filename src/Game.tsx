@@ -130,6 +130,8 @@ export function Game({
     const prevAttackingRef = useRef(false);
     const prevNextLevelRef = useRef(false);
 
+    const firstTickRef = useRef(false);
+
     const pendingRespawnRef = useRef<null | { level: 0 | 1 | 2 }>(null);
 
     const keysRef = useKeyboard();
@@ -174,6 +176,14 @@ export function Game({
             [id]: { ...prev[id], flags: { ...prev[id].flags, ...patch } },
         }));
     };
+
+    useEffect(() => {
+        console.log("[Game] mounted");
+
+        return () => {
+            console.log("[Game] unmounted");
+        };
+    }, []);
 
     useEffect(() => {
         const prev = prevAttackingRef.current;
@@ -328,6 +338,16 @@ export function Game({
     };
 
     useTick((Ticker) => {
+
+        if (!firstTickRef.current) {
+            firstTickRef.current = true;
+            console.log("[Game] first tick", {
+                deltaMS: Ticker.deltaMS,
+                screenW,
+                screenH,
+            });
+        }
+
         const dtRaw = Ticker.deltaMS / 1000;
         const dt = Math.min(dtRaw, 1 / 20);
 
