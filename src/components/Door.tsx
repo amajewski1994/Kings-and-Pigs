@@ -41,11 +41,6 @@ export function Door({
     const effectiveState: DoorState = autoCycle ? internalState : state;
 
     useEffect(() => {
-        console.log("[Door] mounted");
-        return () => console.log("[Door] unmounted");
-    }, []);
-
-    useEffect(() => {
         let alive = true;
 
         (async () => {

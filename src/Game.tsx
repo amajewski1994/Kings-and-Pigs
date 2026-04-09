@@ -88,11 +88,6 @@ export function Game({
         enemy2: { x: START_ENEMY2_X, y: START_ENEMY2_Y, hp: ENEMY_MAX_HP, flipX: false, anim: "idle", flags: { attacking: false, hit: false, dead: true, aggro: false } },
     });
 
-    useEffect(() => {
-        console.log("[Game] mounted");
-        return () => console.log("[Game] unmounted");
-    }, []);
-
     const { player, enemy1, enemy2 } = entities
 
     const [levelIndex, setLevelIndex] = useState<0 | 1 | 2>(0);
@@ -134,8 +129,6 @@ export function Game({
     const audioUnlockedRef = useRef(false); // for mobile
     const prevAttackingRef = useRef(false);
     const prevNextLevelRef = useRef(false);
-
-    const firstTickRef = useRef(false);
 
     const pendingRespawnRef = useRef<null | { level: 0 | 1 | 2 }>(null);
 
@@ -183,14 +176,6 @@ export function Game({
     };
 
     useEffect(() => {
-        console.log("[Game] mounted");
-
-        return () => {
-            console.log("[Game] unmounted");
-        };
-    }, []);
-
-    useEffect(() => {
         const prev = prevAttackingRef.current;
         const next = player.flags.attacking;
 
@@ -225,23 +210,36 @@ export function Game({
         sound.add('background', SOUNDS.background);
         sound.add('nextLevel', SOUNDS.nextLevel);
 
-        sound.volumeAll = 0.1
-        sound.volume('background', 0.5)
+        sound.volumeAll = 0.1;
+        sound.volume('background', 0.5);
 
-        sound.play('background')
-
-        const onMouseDown = (e: MouseEvent) => {
+        const unlockAudio = () => {
             if (!audioUnlockedRef.current) {
                 audioUnlockedRef.current = true;
-                sound.play('playerMiss', { volume: 0 }); // unlock
+
+                sound.play('playerMiss', { volume: 0 });
+                sound.play('background');
             }
+        };
+
+        const onMouseDown = (e: MouseEvent) => {
+            unlockAudio();
 
             if (e.button !== 0) return;
-            patchFlags('player', { attacking: true })
+            patchFlags('player', { attacking: true });
+        };
+
+        const onKeyDown = () => {
+            unlockAudio();
         };
 
         window.addEventListener("mousedown", onMouseDown);
-        return () => window.removeEventListener("mousedown", onMouseDown);
+        window.addEventListener("keydown", onKeyDown);
+
+        return () => {
+            window.removeEventListener("mousedown", onMouseDown);
+            window.removeEventListener("keydown", onKeyDown);
+        };
     }, []);
 
     useEffect(() => { transitionedRef.current = false; }, [levelIndex]);
@@ -297,7 +295,6 @@ export function Game({
         attacking && atkT >= ATTACK_WINDUP && atkT <= (ATTACK_WINDUP + ATTACK_ACTIVE);
 
     const applyDamage = (targetId: EntityId, currentHp: number, dmg: number) => {
-
         const deadSoundIdx = targetId === 'player' ? 'player' : levelIndex === MAX_LVL ? 'kingPig' : 'pig'
         const hitSoundIdx = targetId === 'player' ? 'player' : 'pig'
 
@@ -343,16 +340,6 @@ export function Game({
     };
 
     useTick((Ticker) => {
-
-        if (!firstTickRef.current) {
-            firstTickRef.current = true;
-            console.log("[Game] first tick", {
-                deltaMS: Ticker.deltaMS,
-                screenW,
-                screenH,
-            });
-        }
-
         const dtRaw = Ticker.deltaMS / 1000;
         const dt = Math.min(dtRaw, 1 / 20);
 
@@ -648,8 +635,7 @@ export function Game({
 
     return (
         <>
-            {/* WORLD */}
-            {/* <TileMap
+            <TileMap
                 tileset={tileset}
                 map={map}
                 tileSize={32}
@@ -669,7 +655,7 @@ export function Game({
                 worldY={mapOffsetY}
                 levelIndex={levelIndex}
                 doorStates={doorStates}
-            /> */}
+            />
 
             {/* UI: HP bars (enemies first, then player) */}
             {enemiesToRender.map(({ id, ui, hpMax }) => (
@@ -691,7 +677,6 @@ export function Game({
                 flipX={player.flipX}
             />
 
-            {/* ENTITIES */}
             {enemiesToRender.map(({ id, ui, enemyProps }) => (
                 <Enemy
                     key={id}

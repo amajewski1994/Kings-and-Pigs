@@ -9,7 +9,6 @@ const { tilesetUrl, decorUrl } = TILES_SPRITES;
 export default function App() {
   const [tileset, setTileset] = useState<Texture | null>(null);
   const [decorTex, setDecorTex] = useState<Texture | null>(null);
-  const [gameReady, setGameReady] = useState(false);
 
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
 
@@ -20,30 +19,13 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    console.log("[App] render", {
-      gameReady,
-      hasTileset: !!tileset,
-      hasDecorTex: !!decorTex,
-    })
-
     let alive = true;
 
     (async () => {
-      console.log("[App] start loading textures");
-
       const [terrain, decor] = await Promise.all([
         Assets.load<Texture>(tilesetUrl),
         Assets.load<Texture>(decorUrl),
       ]);
-
-      console.log("[App] textures loaded", {
-        tilesetUrl,
-        decorUrl,
-        terrainWidth: terrain.width,
-        terrainHeight: terrain.height,
-        decorWidth: decor.width,
-        decorHeight: decor.height,
-      });
 
       terrain.source.scaleMode = "nearest";
       decor.source.scaleMode = "nearest";
@@ -52,7 +34,6 @@ export default function App() {
 
       setTileset(terrain);
       setDecorTex(decor);
-      console.log("[App] textures saved to state");
     })();
 
     return () => {
@@ -60,80 +41,19 @@ export default function App() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!tileset || !decorTex) return;
-
-    console.log("[App] scheduling Game mount after 2 RAFs");
-
-    let raf1 = 0;
-    let raf2 = 0;
-
-    raf1 = requestAnimationFrame(() => {
-      console.log("[App] RAF 1");
-      raf2 = requestAnimationFrame(() => {
-        console.log("[App] RAF 2 -> gameReady=true");
-        setGameReady(true);
-      });
-    });
-
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-    };
-  }, [tileset, decorTex]);
-
-  useEffect(() => {
-    console.log("[App] gameReady changed:", gameReady);
-  }, [gameReady]);
-
-  useEffect(() => {
-    console.log("[App] tileset changed:", !!tileset);
-  }, [tileset]);
-
-  useEffect(() => {
-    console.log("[App] decorTex changed:", !!decorTex);
-  }, [decorTex]);
-
-  useEffect(() => {
-    return () => {
-      console.log("[App] unmounted");
-    };
-  }, []);
-
-  useEffect(() => {
-    console.log("[Application wrapper] mounted");
-    return () => console.log("[Application wrapper] unmounted");
-  }, []);
-
-  useEffect(() => {
-    const onError = (event: ErrorEvent) => {
-      console.error("[window.onerror]", event.message, event.error);
-    };
-
-    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error("[unhandledrejection]", event.reason);
-    };
-
-    window.addEventListener("error", onError);
-    window.addEventListener("unhandledrejection", onUnhandledRejection);
-
-    return () => {
-      window.removeEventListener("error", onError);
-      window.removeEventListener("unhandledrejection", onUnhandledRejection);
-    };
-  }, []);
+  const shouldStart = !!tileset && !!decorTex;
 
   return (
-    <div style={{ width: "100vw", height: "100vh" }}>
-      <Application
-        width={size.w}
-        height={size.h}
-        backgroundColor={0x0b1020}
-        antialias={false}
-        autoDensity
-        resolution={window.devicePixelRatio || 1}
-      >
-        {gameReady && tileset && decorTex && (
+    <div style={{ width: "100vw", height: "100vh", background: "#0b1020" }}>
+      {!shouldStart ? null : (
+        <Application
+          width={size.w}
+          height={size.h}
+          backgroundColor={0x0b1020}
+          antialias={false}
+          autoDensity
+          resolution={window.devicePixelRatio || 1}
+        >
           <Game
             key="game-ready"
             tileset={tileset}
@@ -141,8 +61,8 @@ export default function App() {
             screenW={size.w}
             screenH={size.h}
           />
-        )}
-      </Application>
+        </Application>
+      )}
     </div>
   );
 }

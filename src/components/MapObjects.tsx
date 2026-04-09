@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import type { MapObjectsProps } from "../game/types";
 import { sliceGrid } from "../game/spritesheet";
 import { DECOR_PREFABS } from "../game/decorPrefabs";
@@ -12,11 +12,6 @@ export function MapObjects({ objects, decorTex, tileSize, worldX, worldY, doorSt
         const { frames } = sliceGrid(decorTex, 32, 32, 0, 0, 0, 0);
         return frames;
     }, [decorTex]);
-
-    useEffect(() => {
-        console.log("[MapObjects] mounted");
-        return () => console.log("[MapObjects] unmounted");
-    }, []);
 
     return (
         <pixiContainer>
