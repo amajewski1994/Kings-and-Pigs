@@ -649,7 +649,7 @@ export function Game({
     return (
         <>
             {/* WORLD */}
-            <TileMap
+            {/* <TileMap
                 tileset={tileset}
                 map={map}
                 tileSize={32}
@@ -669,7 +669,7 @@ export function Game({
                 worldY={mapOffsetY}
                 levelIndex={levelIndex}
                 doorStates={doorStates}
-            />
+            /> */}
 
             {/* UI: HP bars (enemies first, then player) */}
             {enemiesToRender.map(({ id, ui, hpMax }) => (
